@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StackBounty Content Automation Engine</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; background: #f8f9fa; }
+    #app { margin: 40px auto; max-width: 900px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }
+    h1 { text-align: center; }
+    .status { margin-top: 16px; color: #666; }
+    label { display: block; margin-top: 20px; font-weight: bold; }
+    input[type="text"] { width: 100%; padding: 8px; font-size: 1rem; margin-top: 4px; border-radius: 4px; border: 1px solid #ccc; }
+    button { margin-top: 20px; padding: 10px 22px; font-size: 1rem; border-radius: 4px; border: none; background: #007bff; color: #fff; cursor: pointer; }
+    button:disabled { background: #aaa; }
+    .output { margin-top: 30px; padding: 16px; background: #f4f4f4; border-radius: 6px; min-height: 60px; }
+    .error { color: #c00; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div id="app">
+  <h1>StackBounty Content Automation Engine</h1>
+  <div id="progress-bar-container">
+    <div id="progress-bar"><div id="progress"></div></div>
+    <div id="progress-labels">
+      <span class="progress-label" data-step="0">1. Product</span>
+      <span class="progress-label" data-step="1">2. Options</span>
+      <span class="progress-label" data-step="2">3. Review</span>
+      <span class="progress-label" data-step="3">4. Publish</span>
+    </div>
+  </div>
+  <form id="workflow-form">
+    <div class="step" id="step-0">
+      <label for="appsumo-url">AppSumo Product URL:</label>
+      <input type="text" id="appsumo-url" name="appsumo-url" required placeholder="https://appsumo.com/products/example" />
+    </div>
+    <div class="step" id="step-1" style="display:none;">
+      <fieldset style="border:1px solid #ccc;padding:16px;margin-bottom:18px;">
+        <legend><b>GenSpark Prompt</b></legend>
+        <label for="prompt-select">Select a Prompt:</label>
+        <select id="prompt-select" style="width:100%;font-size:1rem;"></select>
+        <button type="button" id="load-prompt-btn">Load</button>
+        <button type="button" id="delete-prompt-btn">Delete</button>
+        <label for="prompt-title" style="margin-top:16px;">Prompt Title:</label>
+        <input type="text" id="prompt-title" name="prompt-title" style="width:100%;font-size:1rem;margin-bottom:6px;" placeholder="Enter a title for this prompt" />
+        <label for="prompt">Prompt (edit or create new):</label>
+        <textarea id="prompt" name="prompt" rows="6" style="width:100%;font-size:1rem;resize:vertical;"></textarea>
+        <button type="button" id="save-prompt-btn">Save as New Prompt</button>
+        <div style="margin-top:10px;font-size:0.95em;color:#444;">
+          <b>Available Variables:</b>
+          <code>{{product_name}}</code>, <code>{{product_description}}</code>, <code>{{affiliate_link}}</code>, <code>{{main_benefit}}</code>, <code>{{category}}</code>, <code>{{tags}}</code>
+        </div>
+      </fieldset>
+      <fieldset style="border:1px solid #ccc;padding:16px;">
+        <legend><b>Feature Image Prompt</b></legend>
+        <label for="image-strategy-select">Select an Image Strategy:</label>
+        <select id="image-strategy-select" style="width:100%;font-size:1rem;"></select>
+        <button type="button" id="load-image-strategy-btn">Load</button>
+        <button type="button" id="delete-image-strategy-btn">Delete</button>
+        <label for="image-strategy-title" style="margin-top:16px;">Image Strategy Title:</label>
+        <input type="text" id="image-strategy-title" name="image-strategy-title" style="width:100%;font-size:1rem;margin-bottom:6px;" placeholder="Enter a title for this image strategy" />
+        <label for="image-prompt">Image Prompt (edit or create new):</label>
+        <textarea id="image-prompt" name="image-prompt" rows="4" style="width:100%;font-size:1rem;resize:vertical;"></textarea>
+        <button type="button" id="save-image-strategy-btn">Save as New Image Strategy</button>
+        <div style="margin-top:10px;font-size:0.95em;color:#444;">
+          <b>Available Variables:</b>
+          <code>{{product_name}}</code>, <code>{{product_description}}</code>, <code>{{main_benefit}}</code>
+        </div>
+        <label for="image-style" style="margin-top:18px;">Image Style:</label>
+        <select id="image-style" name="image-style">
+          <option value="default">Default</option>
+          <option value="minimal">Minimal</option>
+          <option value="vibrant">Vibrant</option>
+          <option value="professional">Professional</option>
+        </select>
+      </fieldset>
+    </div>
+    <div class="step" id="step-2" style="display:none;">
+      <div id="review-output"></div>
+      <div id="review-meta" style="margin-top:18px;"></div>
+    </div>
+    <div class="step" id="step-3" style="display:none;">
+      <div id="publish-confirm">
+        <p>Ready to publish this post to WordPress?</p>
+        <div id="publish-summary"></div>
+      </div>
+    </div>
+    <div class="workflow-nav">
+      <button type="button" id="prev-btn" style="display:none;">Back</button>
+      <button type="button" id="next-btn">Next</button>
+      <button type="submit" id="submit-btn" style="display:none;">Publish</button>
+    </div>
+  </form>
+  <div class="status">Status: <span id="status">Idle</span></div>
+  <div class="output" id="output"></div>
+</div>
+<script>
+// --- GenSpark Prompt Management ---
+function getSavedPrompts() {
+  return JSON.parse(localStorage.getItem('GenSparkPrompts') || '[]');
+}
+function savePromptToStorage(name, content) {
+  let prompts = getSavedPrompts();
+  const id = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+  prompts.push({ id, name, content, isDefault: false });
+  localStorage.setItem('GenSparkPrompts', JSON.stringify(prompts));
+}
+function updatePromptFieldsFromDropdown() {
+  const select = document.getElementById('prompt-select');
+  const prompts = getSavedPrompts();
+  const found = prompts.find(p => p.id === select.value);
+  if (found) {
+    document.getElementById('prompt').value = found.content;
+    document.getElementById('prompt-title').value = found.name;
+  } else {
+    document.getElementById('prompt').value = '';
+    document.getElementById('prompt-title').value = '';
+  }
+}
+function deletePromptFromStorage(id) {
+  let prompts = getSavedPrompts();
+  prompts = prompts.filter(p => p.id !== id);
+  localStorage.setItem('GenSparkPrompts', JSON.stringify(prompts));
+}
+function populatePromptDropdown() {
+  const select = document.getElementById('prompt-select');
+  select.innerHTML = '';
+  getSavedPrompts().forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    select.appendChild(opt);
+  });
+}
+function loadPromptToTextarea() {
+  updatePromptFieldsFromDropdown();
+}
+function clearPromptTextarea() {
+  document.getElementById('prompt').value = '';
+  document.getElementById('prompt-title').value = '';
+}
+function deleteSelectedPrompt() {
+  const select = document.getElementById('prompt-select');
+  if (select.value) {
+    deletePromptFromStorage(select.value);
+    populatePromptDropdown();
+    clearPromptTextarea();
+  }
+}
+function saveCurrentPrompt() {
+  const name = document.getElementById('prompt-title').value.trim();
+  const content = document.getElementById('prompt').value;
+  if (!name) {
+    alert('Please enter a title for this prompt.');
+    return;
+  }
+  if (!content) {
+    alert('Please enter prompt content.');
+    return;
+  }
+  savePromptToStorage(name, content);
+  populatePromptDropdown();
+  // Select the new prompt
+  const prompts = getSavedPrompts();
+  const last = prompts[prompts.length - 1];
+  document.getElementById('prompt-select').value = last.id;
+}
+document.getElementById('load-prompt-btn').onclick = loadPromptToTextarea;
+document.getElementById('delete-prompt-btn').onclick = deleteSelectedPrompt;
+document.getElementById('save-prompt-btn').onclick = saveCurrentPrompt;
+window.addEventListener('DOMContentLoaded', () => {
+  populatePromptDropdown();
+  updatePromptFieldsFromDropdown();
+  document.getElementById('prompt-select').addEventListener('change', updatePromptFieldsFromDropdown);
+});
+// --- End GenSpark Prompt Management ---
+
+// --- Image Strategy Management ---
+function getSavedImageStrategies() {
+  return JSON.parse(localStorage.getItem('OpenAIImageStrategies') || '[]');
+}
+function saveImageStrategyToStorage(name, promptContent) {
+  let strategies = getSavedImageStrategies();
+  const id = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+  strategies.push({ id, name, actionType: 'generate', promptContent, isDefault: false });
+  localStorage.setItem('OpenAIImageStrategies', JSON.stringify(strategies));
+}
+function updateImageStrategyFieldsFromDropdown() {
+  const select = document.getElementById('image-strategy-select');
+  const strategies = getSavedImageStrategies();
+  const found = strategies.find(s => s.id === select.value);
+  if (found) {
+    document.getElementById('image-prompt').value = found.promptContent;
+    document.getElementById('image-strategy-title').value = found.name;
+  } else {
+    document.getElementById('image-prompt').value = '';
+    document.getElementById('image-strategy-title').value = '';
+  }
+}
+function deleteImageStrategyFromStorage(id) {
+  let strategies = getSavedImageStrategies();
+  strategies = strategies.filter(s => s.id !== id);
+  localStorage.setItem('OpenAIImageStrategies', JSON.stringify(strategies));
+}
+function populateImageStrategyDropdown() {
+  const select = document.getElementById('image-strategy-select');
+  select.innerHTML = '';
+  getSavedImageStrategies().forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name;
+    select.appendChild(opt);
+  });
+}
+function loadImageStrategyToTextarea() {
+  updateImageStrategyFieldsFromDropdown();
+}
+function clearImagePromptTextarea() {
+  document.getElementById('image-prompt').value = '';
+  document.getElementById('image-strategy-title').value = '';
+}
+function deleteSelectedImageStrategy() {
+  const select = document.getElementById('image-strategy-select');
+  if (select.value) {
+    deleteImageStrategyFromStorage(select.value);
+    populateImageStrategyDropdown();
+    clearImagePromptTextarea();
+  }
+}
+function saveCurrentImageStrategy() {
+  const name = document.getElementById('image-strategy-title').value.trim();
+  const promptContent = document.getElementById('image-prompt').value;
+  if (!name) {
+    alert('Please enter a title for this image strategy.');
+    return;
+  }
+  if (!promptContent) {
+    alert('Please enter image prompt content.');
+    return;
+  }
+  saveImageStrategyToStorage(name, promptContent);
+  populateImageStrategyDropdown();
+  // Select the new strategy
+  const strategies = getSavedImageStrategies();
+  const last = strategies[strategies.length - 1];
+  document.getElementById('image-strategy-select').value = last.id;
+}
+document.getElementById('load-image-strategy-btn').onclick = loadImageStrategyToTextarea;
+document.getElementById('delete-image-strategy-btn').onclick = deleteSelectedImageStrategy;
+document.getElementById('save-image-strategy-btn').onclick = saveCurrentImageStrategy;
+window.addEventListener('DOMContentLoaded', () => {
+  populateImageStrategyDropdown();
+  updateImageStrategyFieldsFromDropdown();
+  document.getElementById('image-strategy-select').addEventListener('change', updateImageStrategyFieldsFromDropdown);
+});
+// --- End Image Strategy Management ---
+
+const steps = [
+  document.getElementById('step-0'),
+  document.getElementById('step-1'),
+  document.getElementById('step-2'),
+  document.getElementById('step-3')
+];
+const progress = document.getElementById('progress');
+const progressLabels = document.querySelectorAll('.progress-label');
+let currentStep = 0;
+let workflowResult = null;
+
+function updateProgressBar() {
+  const percent = (currentStep) / (steps.length - 1) * 100;
+  progress.style.width = percent + '%';
+  progressLabels.forEach((label, idx) => {
+    label.classList.toggle('active', idx === currentStep);
+    label.classList.toggle('done', idx < currentStep);
+  });
+}
+function showStep(step) {
+  steps.forEach((el, i) => el.style.display = (i === step) ? '' : 'none');
+  document.getElementById('prev-btn').style.display = step > 0 ? '' : 'none';
+  document.getElementById('next-btn').style.display = (step < steps.length - 1) ? '' : 'none';
+  document.getElementById('submit-btn').style.display = (step === steps.length - 1) ? '' : 'none';
+  updateProgressBar();
+}
+document.getElementById('prev-btn').onclick = () => {
+  if (currentStep > 0) {
+    currentStep--;
+    showStep(currentStep);
+  }
+};
+document.getElementById('next-btn').onclick = async () => {
+  if (currentStep === 0) {
+    // Validate URL
+    const url = document.getElementById('appsumo-url').value.trim();
+    if (!url) {
+      document.getElementById('output').innerHTML = '<span class="error">Please enter an AppSumo URL.</span>';
+      return;
+    }
+    document.getElementById('status').textContent = 'Gathering options...';
+    document.getElementById('output').textContent = '';
+    currentStep++;
+    showStep(currentStep);
+  } else if (currentStep === 1) {
+    // Move to review step
+    document.getElementById('status').textContent = 'Generating preview...';
+    document.getElementById('output').textContent = '';
+    // Simulate workflow run with options
+    const appsumoUrl = document.getElementById('appsumo-url').value.trim();
+    const prompt = document.getElementById('prompt').value.trim();
+    const imageStyle = document.getElementById('image-style').value;
+    const options = { prompt, imageStyle };
+    document.getElementById('next-btn').disabled = true;
+    try {
+      const res = await window.electronAPI.invoke('run-workflow', { appsumoUrl, options });
+      if (res.success) {
+        workflowResult = res.result;
+        document.getElementById('review-output').innerHTML = `<pre>${JSON.stringify(res.result, null, 2)}</pre>`;
+        // Show category, tags, description from GenSpark (mock)
+        let meta = '';
+        if (res.result.article) {
+          meta += `<b>Category:</b> ${res.result.article.category || ''}<br/>`;
+          meta += `<b>Tags:</b> ${(res.result.article.tags || []).join(', ')}<br/>`;
+          meta += `<b>Description:</b> ${res.result.article.body || ''}`;
+        }
+        document.getElementById('review-meta').innerHTML = meta;
+        document.getElementById('status').textContent = 'Preview generated';
+        currentStep++;
+        showStep(currentStep);
+      } else {
+        document.getElementById('status').textContent = 'Error';
+        document.getElementById('output').innerHTML = `<span class="error">${res.error}</span>`;
+      }
+    } catch (err) {
+      document.getElementById('status').textContent = 'Error';
+      document.getElementById('output').innerHTML = `<span class="error">${err.message}</span>`;
+    } finally {
+      document.getElementById('next-btn').disabled = false;
+    }
+  } else if (currentStep === 2) {
+    // Move to publish step
+    if (workflowResult) {
+      document.getElementById('publish-summary').innerHTML = `<pre>${JSON.stringify(workflowResult.finalContent, null, 2)}</pre>`;
+    }
+    document.getElementById('status').textContent = 'Ready to publish';
+    currentStep++;
+    showStep(currentStep);
+  }
+};
+
+document.getElementById('workflow-form').onsubmit = async (e) => {
+  e.preventDefault();
+  // Simulate publish
+  document.getElementById('status').textContent = 'Publishing...';
+  document.getElementById('output').textContent = '';
+  document.getElementById('submit-btn').disabled = true;
+  setTimeout(() => {
+    document.getElementById('status').textContent = 'Published!';
+    document.getElementById('output').innerHTML = '<span style="color:green;font-weight:bold;">Post published to WordPress (simulated).</span>';
+    document.getElementById('submit-btn').disabled = false;
+  }, 1200);
+};
+
+showStep(currentStep);
+updateProgressBar();
+</script>
+
+</body>
+</html>
