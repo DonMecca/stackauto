@@ -16,14 +16,15 @@ Manual production of AppSumo review posts is time-consuming and inconsistent. SC
 - Flexible image processing strategies (use, modify, or generate via OpenAI)
 - User review and manual override of generated content
 - One-click WordPress publishing (draft or publish)
-- Prompt/strategy management UI
+- Prompt/strategy management UI (now with reliable dropdowns, EasyMDE-based editing, and full CRUD)
 - Settings/configuration UI (API keys, logo path, etc.)
 - Local logging and history tracking
+- All prompt/image strategy content is stored in localStorage for now (migration to electron-store planned)
 
 ## MVP Scope
 - Electron app with main UI shell
 - Manual AppSumo URL input
-- Settings and prompt/strategy management
+- Settings and prompt/strategy management (with robust dropdowns and EasyMDE integration)
 - Core workflow: scrape, generate, process image, preview, and post
 - Logging and local history
 

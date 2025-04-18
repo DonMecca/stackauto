@@ -11,5 +11,8 @@ This directory contains documentation for SCAE.
 - [Task List](./TASK_LIST.md)
 - [Roadmap](./ROADMAP.md)
 - [Logging & Error Handling](./LOGGING_ERROR_HANDLING.md)
+- [PROGRESS & Changelog](../PROGRESS.md)
 
 For setup and usage, see the main [`README.md`](../README.md).
+
+**Note:** Prompt and image strategy management is now robust, with dropdowns and editing fully powered by EasyMDE. See PROGRESS.md for recent changes.

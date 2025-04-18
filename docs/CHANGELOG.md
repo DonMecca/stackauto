@@ -9,6 +9,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [Unreleased]
 - Ongoing development, see `/docs/TASK_LIST.md` for current progress.
 
+## [1.4.0] – 2025-04-18
+### Changed
+- Fixed population and selection of saved prompts and image strategies in dropdowns.
+- Ensured backward compatibility for previously saved items.
+- Now both dropdowns initialize on app load and refresh on Options step navigation.
+- EasyMDE is now the single source for editing and saving prompt/image content.
+- UI/UX improvements: toolbar icons visible, error/status logs in the UI, custom preview boxes removed.
+- Bug fix: image strategy save always uses EasyMDE content.
+- Debug logging and raw JSON output removed from UI.
+
+See `PROGRESS.md` for full details.
+
 ## [1.3.0] – 2025-04-16
 ### Added
 - Initial documentation suite (`README.md`, `/docs/*`)
