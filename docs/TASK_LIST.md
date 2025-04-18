@@ -11,15 +11,15 @@
 ## Agile, Detailed Task Breakdown
 
 ### 1. Project Initialization & Scaffolding
-- [ ] Initialize Git repository and configure `.gitignore` [T]
-- [ ] Set up Electron project structure (main/renderer, IPC config) [T]
-- [ ] Set up basic npm scripts and dependency management [T]
-- [ ] Add ESLint/Prettier configuration for code quality [T]
+- [✓] Initialize Git repository and configure `.gitignore` [T]
+- [✓] Set up Electron project structure (main/renderer, IPC config) [T]
+- [✓] Set up basic npm scripts and dependency management [T]
+- [✓] Add ESLint/Prettier configuration for code quality [T]
 
 ### 2. Core UI Shell
-- [ ] Build main window HTML/CSS/JS (basic layout, status bar, menu) [T]
-- [ ] Implement IPC communication bridge (contextBridge) [T]
-- [ ] Create placeholder components for all main UI sections [T]
+- [✓] Build main window HTML/CSS/JS (basic layout, status bar, menu) [T]
+- [✓] Implement IPC communication bridge (contextBridge) [T]
+- [✓] Create placeholder components for all main UI sections [T]
 
 ### 3. Configuration & Settings
 - [ ] Integrate `electron-store` for persistent config [T]
@@ -28,9 +28,9 @@
 - [ ] Add tests for config read/write and validation
 
 ### 4. Prompt/Strategy Management
-- [ ] Design prompt and image strategy data models [T]
-- [ ] Implement CRUD UI for prompts/strategies (tabbed/modal) [T]
-- [ ] Wire up logic to `electron-store` [T]
+- [✓] Design prompt and image strategy data models [T]
+- [✓] Implement CRUD UI for prompts/strategies (mocked in localStorage for now) [T]
+- [~] Wire up logic to `electron-store` [T]  <!-- In progress: currently using localStorage, will migrate to electron-store -->
 - [ ] Populate initial default prompts/strategies [T]
 - [ ] Add tests for CRUD operations and default selection
 

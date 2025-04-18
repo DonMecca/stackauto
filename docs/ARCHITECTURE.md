@@ -1,5 +1,16 @@
 # SCAE Architecture
 
+## Current Status (April 2025)
+- Electron app scaffolded and running
+- Multi-step workflow UI implemented
+- CRUD for GenSpark prompts and image strategies (title + content) via localStorage (mocked)
+- Repo is on [GitHub](https://github.com/DonMecca/stackauto)
+
+## Next Steps
+- Migrate prompt/strategy storage to `electron-store`
+- Integrate GenSpark, OpenAI, and WordPress APIs
+- Further UI/UX and workflow enhancements
+
 ## Electron Process Model
 - **Main Process:** Handles backend logic (API calls, file system, scraping, orchestration).
 - **Renderer Process:** Manages the UI (HTML/CSS/JS or framework).
