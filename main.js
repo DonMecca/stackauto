@@ -72,6 +72,25 @@ ipcMain.handle('run-workflow', async (event, { appsumoUrl, options }) => {
   }
 });
 
+// IPC: Config store access for prompts and strategies
+ipcMain.handle('config-get', async (event, key) => {
+  try {
+    return await configManager.get(key);
+  } catch (err) {
+    console.error('config-get error', err);
+    return null;
+  }
+});
+ipcMain.handle('config-set', async (event, { key, value }) => {
+  try {
+    await configManager.set(key, value);
+    return true;
+  } catch (err) {
+    console.error('config-set error', err);
+    return false;
+  }
+});
+
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });

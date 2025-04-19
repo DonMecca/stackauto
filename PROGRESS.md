@@ -17,6 +17,10 @@
 - **Bug Fixes:**
   - Prevented errors when saving image strategies by ensuring prompt content is always retrieved from EasyMDE.
   - Cleaned up debug logging and removed raw JSON output from the UI.
+- **Logo & Featured Image Management:**
+  - Added logo selection dropdown with CRUD (upload, load, delete saved logos).
+  - Added featured image input supporting URL, upload, and paste from clipboard.
+  - Inline previews for both logos and featured images.
 
 ### **How It Works Now**
 - When the app loads, both dropdowns populate with saved prompts/strategies from localStorage.
