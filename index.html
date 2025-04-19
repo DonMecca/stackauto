@@ -71,7 +71,6 @@
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
   <style id="override-css">
     /* Bring dropdowns to front for interaction */
     #prompt-select, #image-strategy-select {
@@ -103,6 +102,7 @@
   </style>
 </head>
 <body>
+  <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <div id="app">
   <h1>StackBounty Content Automation Engine</h1>
@@ -136,36 +136,6 @@
         <div style="font-size:0.95em;color:#444;margin-top:6px;">
           <b>Tip:</b> Use the <b>eye icon</b> in the toolbar to preview your markdown as rendered HTML.
         </div>
-        <script>
-        let promptMDE;
-        document.addEventListener('DOMContentLoaded', () => {
-          try {
-            promptMDE = new EasyMDE({
-              element: document.getElementById('prompt-input'),
-              spellChecker: false,
-              toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "preview", "guide"],
-              status: false,
-              minHeight: "180px"
-            });
-            // Style EasyMDE toolbar for visibility
-            const ptoolbar = document.querySelectorAll('.editor-toolbar');
-            ptoolbar.forEach(tb => {
-              tb.style.backgroundColor = '#e9ecef';
-              tb.querySelectorAll('a').forEach(a => a.style.color = '#000');
-            });
-            document.getElementById('prompt-select').addEventListener('change', updatePromptFieldsFromDropdown);
-            document.getElementById('load-prompt-btn').addEventListener('click', loadPromptToTextarea);
-            document.getElementById('delete-prompt-btn').addEventListener('click', deleteSelectedPrompt);
-            document.getElementById('save-prompt-btn').addEventListener('click', saveCurrentPrompt);
-          } catch (e) {
-            document.getElementById('error-log').textContent = 'EasyMDE failed to initialize: ' + e.message;
-          }
-        });
-        </script>
-        <div style="margin-top:10px;font-size:0.95em;color:#444;">
-          <b>Available Variables:</b>
-          <code>{{product_name}}</code>, <code>{{product_description}}</code>, <code>{{affiliate_link}}</code>, <code>{{main_benefit}}</code>, <code>{{category}}</code>, <code>{{tags}}</code>
-        </div>
       </fieldset>
       <fieldset style="border:1px solid #ccc;padding:16px;">
         <legend><b>Feature Image Prompt</b></legend>
@@ -183,32 +153,6 @@
           <b>Available Variables:</b>
           <code>{{product_name}}</code>, <code>{{product_description}}</code>, <code>{{main_benefit}}</code>
         </div>
-        <script>
-        let imageMDE;
-        document.addEventListener('DOMContentLoaded', () => {
-          try {
-            imageMDE = new EasyMDE({
-              element: document.getElementById('image-prompt'),
-              spellChecker: false,
-              toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "preview", "guide"],
-              status: false,
-              minHeight: "120px"
-            });
-            // Style toolbar for visibility
-            const tb = document.querySelectorAll('.editor-toolbar');
-            tb.forEach(t => {
-              t.style.backgroundColor = '#e9ecef';
-              t.querySelectorAll('a').forEach(a => a.style.color = '#000');
-            });
-            document.getElementById('image-strategy-select').addEventListener('change', updateImageStrategyFieldsFromDropdown);
-            document.getElementById('load-image-strategy-btn').addEventListener('click', loadImageStrategyToTextarea);
-            document.getElementById('delete-image-strategy-btn').addEventListener('click', deleteSelectedImageStrategy);
-            document.getElementById('save-image-strategy-btn').addEventListener('click', saveCurrentImageStrategy);
-          } catch (e) {
-            document.getElementById('error-log').textContent = 'EasyMDE image prompt failed: ' + e.message;
-          }
-        });
-        </script>
         <label for="image-style" style="margin-top:18px;">Image Style:</label>
         <select id="image-style" name="image-style">
           <option value="default">Default</option>
@@ -216,6 +160,22 @@
           <option value="vibrant">Vibrant</option>
           <option value="professional">Professional</option>
         </select>
+        <!-- Logo Selection and Upload -->
+        <label for="logo-select" style="margin-top:16px;">Select StackBounty Logo:</label>
+        <select id="logo-select" style="width:100%;font-size:1rem;"></select>
+        <button type="button" id="load-logo-btn">Load Logo</button>
+        <button type="button" id="delete-logo-btn">Delete Logo</button>
+        <label for="logo-upload" style="margin-top:8px;display:block;">Upload New Logo:</label>
+        <input type="file" id="logo-upload" accept="image/*" />
+        <img id="logo-preview" src="" alt="Logo Preview" style="max-width:100px;margin-top:8px;display:none;" />
+        <label for="logo-url" style="margin-top:8px;display:block;">Or enter logo URL or paste:</label>
+        <input type="text" id="logo-url" placeholder="Paste logo URL or use Ctrl+V" style="width:100%;font-size:1rem;" />
+        <!-- Featured Image Input -->
+        <label for="featured-image-url" style="margin-top:16px;">Featured Image (URL or Paste):</label>
+        <input type="text" id="featured-image-url" placeholder="Paste image URL or use Ctrl+V" style="width:100%;font-size:1rem;" />
+        <label for="featured-image-upload" style="margin-top:8px;display:block;">Or Upload Featured Image:</label>
+        <input type="file" id="featured-image-upload" accept="image/*" />
+        <img id="featured-image-preview" src="" alt="Featured Image Preview" style="max-width:100%;margin-top:8px;display:none;" />
       </fieldset>
     </div>
     <div class="step" id="step-2" style="display:none;">
@@ -224,30 +184,6 @@
         <button type="button" id="toggle-preview-btn">Toggle Preview/Edit</button>
       </div>
       <!-- Review preview box removed; use built-in EasyMDE preview -->
-      <script>
-      let reviewMDE;
-      document.addEventListener('DOMContentLoaded', () => {
-        try {
-          reviewMDE = new EasyMDE({
-            element: document.getElementById('review-editor'),
-            spellChecker: false,
-            toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "preview", "guide"],
-            status: false,
-            minHeight: "220px"
-          });
-          // Style EasyMDE toolbar for visibility on review editor
-          document.querySelectorAll('.editor-toolbar').forEach(tb => {
-            tb.style.backgroundColor = '#e9ecef';
-            tb.querySelectorAll('a').forEach(a => a.style.color = '#212529');
-          });
-          document.getElementById('toggle-preview-btn').onclick = function() {
-            reviewMDE.togglePreview();
-          };
-        } catch (e) {
-          document.getElementById('error-log').textContent = 'EasyMDE review editor failed: ' + e.message;
-        }
-      });
-      </script>
     </div>
     <div class="step" id="step-3" style="display:none;">
       <div id="publish-confirm">
@@ -265,280 +201,6 @@
   <div class="status">Status: <span id="status">Idle</span></div>
   <div id="error-log" style="margin-top:10px;color:#b00;font-size:0.97em;white-space:pre-wrap;background:#fff3f3;border:1px solid #fbb;padding:8px 12px;display:block;"></div>
 </div>
-<script>
-// --- Workflow Navigation and Error Logging ---
-const steps = [
-  document.getElementById('step-0'),
-  document.getElementById('step-1'),
-  document.getElementById('step-2'),
-  document.getElementById('step-3')
-];
-const progress = document.getElementById('progress');
-const progressLabels = document.querySelectorAll('.progress-label');
-let currentStep = 0;
-
-function updateProgressBar() {
-  const percent = (currentStep) / (steps.length - 1) * 100;
-  progress.style.width = percent + '%';
-  progressLabels.forEach((label, idx) => {
-    label.classList.toggle('active', idx === currentStep);
-    label.classList.toggle('done', idx < currentStep);
-  });
-}
-
-function showStep(step) {
-  steps.forEach((el, i) => el.style.display = (i === step) ? '' : 'none');
-  document.getElementById('prev-btn').style.display = step > 0 ? '' : 'none';
-  document.getElementById('next-btn').style.display = (step < steps.length - 1) ? '' : 'none';
-  document.getElementById('submit-btn').style.display = (step === steps.length - 1) ? '' : 'none';
-  // Highlight progress labels
-  document.querySelectorAll('.progress-label').forEach((label, idx) => {
-    label.classList.toggle('active', idx === step);
-    label.classList.toggle('done', idx < step);
-  });
-
-  // Show mock article in REVIEW step (step 2)
-  if (step === 2) {
-    // No-op: removed reference to missing review-preview div
-  }
-
-  // Show mock article in publish step
-  if (step === steps.length - 1) {
-    const summaryDiv = document.getElementById('publish-summary');
-    let mockArticle = JSON.parse(localStorage.getItem('mockWorkflowResult') || 'null');
-    if (!mockArticle) {
-      mockArticle = {
-        title: "How to Automate Content Creation with StackBounty",
-        body: "StackBounty makes it easy to automate your content workflow.\n\n**Key Steps:**\n\n1. Select a product.\n2. Choose your prompt and image strategy.\n3. Review the generated article.\n4. Publish to WordPress with one click!",
-        meta: {
-          category: "Content Automation",
-          tags: ["automation", "content", "wordpress"]
-        }
-      };
-    }
-    summaryDiv.innerHTML = `
-      <h2 style="margin-top:0;">${mockArticle.title}</h2>
-      <div style="margin-bottom:18px;">${mockArticle.body.replace(/\n/g, '<br>')}</div>
-      <div style="font-size:1.03em;color:#444;">
-        <b>Category:</b> ${mockArticle.meta?.category || ''}<br>
-        <b>Tags:</b> ${(mockArticle.meta?.tags || []).join(', ')}
-      </div>
-    `;
-  }
-  if (step === 1) {
-    populatePromptDropdown();
-    populateImageStrategyDropdown();
-  }
-  updateProgressBar();
-}
-
-document.getElementById('prev-btn').onclick = () => {
-  if (currentStep > 0) {
-    currentStep--;
-    showStep(currentStep);
-  }
-};
-document.getElementById('next-btn').onclick = () => {
-  try {
-    if (currentStep < steps.length - 1) {
-      currentStep++;
-      showStep(currentStep);
-    }
-  } catch (err) {
-    document.getElementById('error-log').textContent = err.message;
-  }
-};
-showStep(currentStep);
-updateProgressBar();
-
-// --- Prompt Management ---
-function getSavedPrompts() {
-  let raw = localStorage.getItem('GenSparkPrompts');
-  let prompts = JSON.parse(raw || '[]');
-  prompts = prompts.map(p => {
-    let id = p.id || (p.name || p.title || 'prompt').toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
-    let name = p.name || p.title || 'Untitled';
-    let content = p.content || p.promptContent || '';
-    return { id, name, content };
-  });
-  return prompts;
-}
-function savePromptToStorage(name, content) {
-  let prompts = getSavedPrompts();
-  const id = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
-  prompts.push({ id, name, content });
-  localStorage.setItem('GenSparkPrompts', JSON.stringify(prompts));
-}
-function deletePromptFromStorage(id) {
-  let prompts = getSavedPrompts();
-  prompts = prompts.filter(p => p.id !== id);
-  localStorage.setItem('GenSparkPrompts', JSON.stringify(prompts));
-}
-function populatePromptDropdown() {
-  const select = document.getElementById('prompt-select');
-  const prompts = getSavedPrompts();
-  select.innerHTML = '<option value="">Select a prompt</option>';
-  prompts.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.name;
-    select.appendChild(opt);
-  });
-  if (prompts.length > 0) {
-    select.value = prompts[0].id;
-    updatePromptFieldsFromDropdown();
-    document.getElementById('error-log').textContent = `Loaded ${prompts.length} prompts.`;
-  } else {
-    document.getElementById('error-log').textContent = `No prompts found.`;
-  }
-}
-function updatePromptFieldsFromDropdown() {
-  const select = document.getElementById('prompt-select');
-  const prompts = getSavedPrompts();
-  const found = prompts.find(p => p.id === select.value);
-  if (found) {
-    document.getElementById('prompt-title').value = found.name;
-    promptMDE.value(found.content);
-  } else {
-    document.getElementById('prompt-title').value = '';
-    promptMDE.value('');
-  }
-}
-function loadPromptToTextarea() {
-  updatePromptFieldsFromDropdown();
-}
-function deleteSelectedPrompt() {
-  const select = document.getElementById('prompt-select');
-  if (select.value) {
-    deletePromptFromStorage(select.value);
-    populatePromptDropdown();
-    updatePromptFieldsFromDropdown();
-  }
-}
-function saveCurrentPrompt() {
-  const name = document.getElementById('prompt-title').value.trim();
-  const content = promptMDE.value();
-  if (!name) {
-    alert('Please enter a prompt title.');
-    return;
-  }
-  if (!content.trim()) {
-    alert('Please enter prompt content.');
-    return;
-  }
-  savePromptToStorage(name, content);
-  populatePromptDropdown();
-  // Select the new prompt
-  const prompts = getSavedPrompts();
-  const last = prompts[prompts.length - 1];
-  document.getElementById('prompt-select').value = last.id;
-}
-
-// --- Image Strategy Management ---
-function getSavedImageStrategies() {
-  let raw = localStorage.getItem('OpenAIImageStrategies');
-  let strategies = JSON.parse(raw || '[]');
-  strategies = strategies.map(s => {
-    let id = s.id || (s.name || s.title || 'strategy').toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
-    let name = s.name || s.title || 'Untitled';
-    let promptContent = s.promptContent || s.content || '';
-    return { id, name, promptContent };
-  });
-  return strategies;
-}
-function saveImageStrategyToStorage(name, promptContent) {
-  let strategies = getSavedImageStrategies();
-  const id = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
-  strategies.push({ id, name, actionType: 'generate', promptContent, isDefault: false });
-  localStorage.setItem('OpenAIImageStrategies', JSON.stringify(strategies));
-}
-function deleteImageStrategyFromStorage(id) {
-  let strategies = getSavedImageStrategies();
-  strategies = strategies.filter(s => s.id !== id);
-  localStorage.setItem('OpenAIImageStrategies', JSON.stringify(strategies));
-}
-function populateImageStrategyDropdown() {
-  const select = document.getElementById('image-strategy-select');
-  const strategies = getSavedImageStrategies();
-  select.innerHTML = '<option value="">Select an image strategy</option>';
-  strategies.forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s.id;
-    opt.textContent = s.name;
-    select.appendChild(opt);
-  });
-  if (strategies.length > 0) {
-    select.value = strategies[0].id;
-    updateImageStrategyFieldsFromDropdown();
-    document.getElementById('error-log').textContent = `Loaded ${strategies.length} image strategies.`;
-  } else {
-    document.getElementById('error-log').textContent = `No image strategies found.`;
-  }
-}
-function updateImageStrategyFieldsFromDropdown() {
-  const select = document.getElementById('image-strategy-select');
-  const strategies = getSavedImageStrategies();
-  const found = strategies.find(s => s.id === select.value);
-  if (found) {
-    imageMDE.value(found.promptContent);
-    document.getElementById('image-strategy-title').value = found.name;
-  } else {
-    imageMDE.value('');
-    document.getElementById('image-strategy-title').value = '';
-  }
-}
-function loadImageStrategyToTextarea() {
-  updateImageStrategyFieldsFromDropdown();
-}
-function clearImagePromptTextarea() {
-  imageMDE.value('');
-  document.getElementById('image-strategy-title').value = '';
-}
-function deleteSelectedImageStrategy() {
-  const select = document.getElementById('image-strategy-select');
-  if (select.value) {
-    deleteImageStrategyFromStorage(select.value);
-    populateImageStrategyDropdown();
-    clearImagePromptTextarea();
-  }
-}
-function saveCurrentImageStrategy(event) {
-  if (event && event.target && event.target.id !== 'save-image-strategy-btn') return;
-  const name = document.getElementById('image-strategy-title').value.trim();
-  const promptContent = imageMDE.value().trim();
-  if (!name) {
-    alert('Please enter a title for this image strategy.');
-    return;
-  }
-  if (!promptContent) {
-    alert('Please enter image prompt content.');
-    return;
-  }
-  saveImageStrategyToStorage(name, promptContent);
-  populateImageStrategyDropdown();
-  // Select the new strategy
-  const strategies = getSavedImageStrategies();
-  const last = strategies[strategies.length - 1];
-  document.getElementById('image-strategy-select').value = last.id;
-}
-
-// Global fallback init for prompt and image strategy controls
-window.addEventListener('DOMContentLoaded', () => {
-  console.log('[DEBUG] Global fallback init for dropdowns');
-  // Prompt controls
-  document.getElementById('prompt-select').addEventListener('change', updatePromptFieldsFromDropdown);
-  document.getElementById('load-prompt-btn').addEventListener('click', loadPromptToTextarea);
-  document.getElementById('delete-prompt-btn').addEventListener('click', deleteSelectedPrompt);
-  document.getElementById('save-prompt-btn').addEventListener('click', saveCurrentPrompt);
-  // Image strategy controls
-  document.getElementById('image-strategy-select').addEventListener('change', updateImageStrategyFieldsFromDropdown);
-  document.getElementById('load-image-strategy-btn').addEventListener('click', loadImageStrategyToTextarea);
-  document.getElementById('delete-image-strategy-btn').addEventListener('click', deleteSelectedImageStrategy);
-  document.getElementById('save-image-strategy-btn').addEventListener('click', saveCurrentImageStrategy);
-  // Initial population of prompt and image strategy dropdowns
-  populatePromptDropdown();
-  populateImageStrategyDropdown();
-});
-</script>
+<script src="renderer.js"></script>
 </body>
 </html>
