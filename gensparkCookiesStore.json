@@ -1,0 +1,149 @@
+{
+  "sets": [
+    {
+      "id": "1745239170319",
+      "label": "GenSpark Login",
+      "date": "2025-04-21T12:39:30.319Z",
+      "cookies": [
+        {
+          "domain": ".www.genspark.ai",
+          "hostOnly": false,
+          "httpOnly": true,
+          "name": "ARRAffinity",
+          "path": "/",
+          "sameSite": "unspecified",
+          "secure": true,
+          "session": true,
+          "storeId": "0",
+          "value": "fe53543f1fc060fe2bfc1ddd8a9461f77bb246791154568debd81246b162cc78",
+          "id": 1
+        },
+        {
+          "domain": ".www.genspark.ai",
+          "hostOnly": false,
+          "httpOnly": true,
+          "name": "ARRAffinitySameSite",
+          "path": "/",
+          "sameSite": "no_restriction",
+          "secure": true,
+          "session": true,
+          "storeId": "0",
+          "value": "fe53543f1fc060fe2bfc1ddd8a9461f77bb246791154568debd81246b162cc78",
+          "id": 2
+        },
+        {
+          "domain": "www.genspark.ai",
+          "expirationDate": 1779797053.888146,
+          "hostOnly": true,
+          "httpOnly": false,
+          "name": "agree_terms",
+          "path": "/",
+          "sameSite": "lax",
+          "secure": false,
+          "session": false,
+          "storeId": "0",
+          "value": "1",
+          "id": 3
+        },
+        {
+          "domain": "www.genspark.ai",
+          "expirationDate": 1745239150.17846,
+          "hostOnly": true,
+          "httpOnly": false,
+          "name": "ai_session",
+          "path": "/",
+          "sameSite": "no_restriction",
+          "secure": true,
+          "session": false,
+          "storeId": "0",
+          "value": "NWKkRDeIzozYzsOtqjpMqG|1745233943581|1745237350149",
+          "id": 4
+        },
+        {
+          "domain": "www.genspark.ai",
+          "expirationDate": 1775204746.628653,
+          "hostOnly": true,
+          "httpOnly": false,
+          "name": "ai_user",
+          "path": "/",
+          "sameSite": "no_restriction",
+          "secure": true,
+          "session": false,
+          "storeId": "0",
+          "value": "QidMZf2DLSH7L3/dLtxAn5|2025-04-03T08:25:46.628Z",
+          "id": 5
+        },
+        {
+          "domain": "www.genspark.ai",
+          "expirationDate": 1745283496.498528,
+          "hostOnly": true,
+          "httpOnly": true,
+          "name": "c1",
+          "path": "/",
+          "sameSite": "lax",
+          "secure": false,
+          "session": false,
+          "storeId": "0",
+          "value": "P9%2B3lUWaPDt389QHH9lBaDH9C1rf4pZ07vnxUW94u%2BZFYG%2BmmHXBF%2FemVPyhDKgd3pKhd%2FEQCBTbXn90dCJSeCVQMAYiW9%2Ff82%2FB1MZq4sEpHYjw",
+          "id": 6
+        },
+        {
+          "domain": "www.genspark.ai",
+          "expirationDate": 1745283496.498738,
+          "hostOnly": true,
+          "httpOnly": true,
+          "name": "c2",
+          "path": "/",
+          "sameSite": "lax",
+          "secure": false,
+          "session": false,
+          "storeId": "0",
+          "value": "w7syGKsCUWre%2Ba49",
+          "id": 7
+        },
+        {
+          "domain": "www.genspark.ai",
+          "hostOnly": true,
+          "httpOnly": false,
+          "name": "from_auth",
+          "path": "/",
+          "sameSite": "unspecified",
+          "secure": false,
+          "session": true,
+          "storeId": "0",
+          "value": "",
+          "id": 8
+        },
+        {
+          "domain": "www.genspark.ai",
+          "expirationDate": 1775204745.217176,
+          "hostOnly": true,
+          "httpOnly": false,
+          "name": "i18n_set",
+          "path": "/",
+          "sameSite": "lax",
+          "secure": false,
+          "session": false,
+          "storeId": "0",
+          "value": "en-US",
+          "id": 9
+        },
+        {
+          "domain": "www.genspark.ai",
+          "expirationDate": 1746965357.369155,
+          "hostOnly": true,
+          "httpOnly": true,
+          "name": "session_id",
+          "path": "/",
+          "sameSite": "lax",
+          "secure": false,
+          "session": false,
+          "storeId": "0",
+          "value": "1e305915-d1c4-4dd0-b398-055928d51c66:c65a31228d9bb3bedd5c31224ccbf443fabab0ebde473535da9e90e0a6367d05",
+          "id": 10
+        }
+      ]
+    }
+  ],
+  "activeId": "1745239170319"
+}

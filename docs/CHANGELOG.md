@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 - Ongoing development, see `/docs/TASK_LIST.md` for current progress.
+- Added clipboard polling logic to GenSpark automation for more reliable extraction.
+- Clipboard method still sometimes fails to detect the article due to timing/race condition; debugging ongoing.
 
 ## [1.4.0] – 2025-04-18
 ### Changed

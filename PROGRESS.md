@@ -35,4 +35,13 @@
 
 ---
 
+## April 21, 2025
+
+### Clipboard Extraction Debugging
+- Implemented clipboard polling (up to 10 tries, 200ms apart) after GenSpark copy action to address race condition.
+- Despite polling, clipboard method still sometimes fails to detect the article ("No article found (clipboard)").
+- Possible causes: browser async clipboard update, Puppeteer click not triggering copy, or OS-level clipboard issues.
+- Next steps: deeper investigation into Puppeteer click reliability, alternative extraction methods, and user/system clipboard permissions.
+
+---
 **Commit this file with your next update to keep a running changelog.**

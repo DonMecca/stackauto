@@ -1,5 +1,48 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+const fs = require('fs');
 const path = require('path');
+const { runGenSparkAutomation } = require('./gensparkAutomation');
+
+const COOKIES_STORE_PATH = path.join(__dirname, 'gensparkCookiesStore.json');
+
+function loadCookieStore() {
+  try {
+    if (!fs.existsSync(COOKIES_STORE_PATH)) return { sets: [], activeId: null };
+    return JSON.parse(fs.readFileSync(COOKIES_STORE_PATH, 'utf8'));
+  } catch { return { sets: [], activeId: null }; }
+}
+function saveCookieStore(store) {
+  fs.writeFileSync(COOKIES_STORE_PATH, JSON.stringify(store, null, 2), 'utf8');
+}
+
+ipcMain.handle('genspark-list-cookies', async () => {
+  return loadCookieStore();
+});
+ipcMain.handle('genspark-add-cookies', async (event, { label, cookies }) => {
+  const store = loadCookieStore();
+  const id = Date.now().toString();
+  store.sets.push({ id, label, date: new Date().toISOString(), cookies });
+  store.activeId = id;
+  saveCookieStore(store);
+  return store;
+});
+ipcMain.handle('genspark-delete-cookies', async (event, id) => {
+  const store = loadCookieStore();
+  store.sets = store.sets.filter(s => s.id !== id);
+  if (store.activeId === id) store.activeId = store.sets.length ? store.sets[0].id : null;
+  saveCookieStore(store);
+  return store;
+});
+ipcMain.handle('genspark-set-active-cookies', async (event, id) => {
+  const store = loadCookieStore();
+  store.activeId = id;
+  saveCookieStore(store);
+  return store;
+});
+
+
+
+ // <-- Added for GenSpark browser automation
 
 // Import core modules
 const GenSparkClient = require('./src/clients/gensparkClient');
@@ -59,6 +102,30 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// IPC: Save GenSpark cookies
+ipcMain.handle('genspark-save-cookies', async (event, cookies) => {
+  try {
+    fs.writeFileSync(path.join(__dirname, 'gensparkCookies.json'), JSON.stringify(cookies, null, 2), 'utf-8');
+    return true;
+  } catch (e) {
+    console.error('Failed to save GenSpark cookies:', e);
+    return false;
+  }
+});
+
+// IPC: GenSpark browser automation
+ipcMain.handle('genspark-run', async (event, { appsumoUrl, promptTemplate, extractionMethod }) => {
+  try {
+    const store = loadCookieStore();
+    const activeSet = store.sets.find(s => s.id === store.activeId);
+    const cookies = activeSet ? activeSet.cookies : null;
+    const result = await runGenSparkAutomation(appsumoUrl, promptTemplate, extractionMethod || 'clipboard');
+    return result;
+  } catch (err) {
+    return { clipboard: '', dom: '', error: err.message };
+  }
 });
 
 // IPC: Expose workflow orchestration to renderer

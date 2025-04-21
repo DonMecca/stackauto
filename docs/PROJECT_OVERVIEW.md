@@ -25,7 +25,10 @@ Manual production of AppSumo review posts is time-consuming and inconsistent. SC
 - Electron app with main UI shell
 - Manual AppSumo URL input
 - Settings and prompt/strategy management (with robust dropdowns and EasyMDE integration)
-- Core workflow: scrape, generate, process image, preview, and post
+- Core workflow: 
+  > **Note (April 2025):**
+  > We are actively debugging a clipboard extraction race condition in the GenSpark automation. The clipboard sometimes does not update in time for the script to read the copied article. Polling logic has been implemented, but the issue persists. See PROGRESS.md for status.
+  scrape, generate, process image, preview, and post
 - Logging and local history
 
 ## Future Considerations (V2+)

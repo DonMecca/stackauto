@@ -2,6 +2,7 @@
 let promptMDE, imageMDE, reviewMDE;
 
 async function initApp() {
+  console.log('[renderer] initApp() is running');
   migrateLegacyStorage();
   console.log('[renderer] initApp invoked');
   // Initialize editors
@@ -69,14 +70,209 @@ async function initApp() {
   document.getElementById('delete-prompt-btn').addEventListener('click', deleteSelectedPrompt);
   document.getElementById('save-prompt-btn').addEventListener('click', saveCurrentPrompt);
 
-  // Wire image strategy events
-  document.getElementById('image-strategy-select').addEventListener('change', updateImageStrategyFieldsFromDropdown);
-  document.getElementById('load-image-strategy-btn').addEventListener('click', loadImageStrategyToTextarea);
-  document.getElementById('delete-image-strategy-btn').addEventListener('click', deleteSelectedImageStrategy);
-  document.getElementById('save-image-strategy-btn').addEventListener('click', saveCurrentImageStrategy);
+  // Wire up GenSpark automation test button
+  document.getElementById('test-genspark-btn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const statusEl = document.getElementById('status');
+    const errorLog = document.getElementById('error-log');
+    const btn = document.getElementById('test-genspark-btn');
+    errorLog.textContent = '';
+    btn.disabled = true;
+    statusEl.textContent = 'Running GenSpark automation...';
+    try {
+      const appsumoUrl = document.getElementById('appsumo-url').value.trim();
+      const prompt = promptMDE.value().trim();
+      if (!appsumoUrl || !/^https?:\/\//.test(appsumoUrl)) {
+        errorLog.textContent = 'Please enter a valid AppSumo URL.';
+        btn.disabled = false;
+        statusEl.textContent = 'Idle';
+        return;
+      }
+      if (!prompt) {
+        errorLog.textContent = 'Please enter a prompt.';
+        btn.disabled = false;
+        statusEl.textContent = 'Idle';
+        return;
+      }
+      // Use extraction method from toggle
+      const extractionSelect = document.getElementById('extraction-method-select');
+      const extractionMethod = extractionSelect ? extractionSelect.value : 'clipboard';
+      statusEl.textContent = 'Submitting to GenSpark (' + extractionMethod + ')...';
+      const result = await window.electronAPI.invoke('genspark-run', {
+        appsumoUrl,
+        promptTemplate: prompt,
+        extractionMethod
+      });
+      let extracted = '';
+      if (extractionMethod === 'clipboard') extracted = result.clipboard;
+      else if (extractionMethod === 'dom') extracted = result.dom;
+      if (extracted && extracted.length > 0) {
+        showStep(2);
+        const reviewEditor = document.getElementById('review-editor');
+        if (reviewEditor) reviewEditor.value = extracted;
+        if (window.reviewMDE) window.reviewMDE.value(extracted);
+        statusEl.textContent = 'Article loaded via ' + extractionMethod + '!';
+      } else {
+        errorLog.textContent = 'GenSpark automation error: No article found (' + extractionMethod + ')';
+        statusEl.textContent = 'Idle';
+      }
+    } catch (err) {
+      errorLog.textContent = 'GenSpark automation error: ' + (err.message || err);
+      statusEl.textContent = 'Idle';
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
-  // Wire logo events
-  document.getElementById('logo-select').addEventListener('change', updateLogoFieldsFromDropdown);
+  // GenSpark Cookie Management UI logic (multi-slot)
+  const cookieInput = document.getElementById('genspark-cookies-input');
+  const cookieUpload = document.getElementById('genspark-cookies-upload');
+  const cookieSaveBtn = document.getElementById('save-genspark-cookies-btn');
+  const cookieStatus = document.getElementById('genspark-cookies-status');
+  const cookieDropdown = document.createElement('select');
+  cookieDropdown.id = 'genspark-cookies-dropdown';
+  cookieDropdown.style.marginTop = '8px';
+  cookieInput.parentNode.insertBefore(cookieDropdown, cookieInput.nextSibling);
+  const cookieDeleteBtn = document.createElement('button');
+  cookieDeleteBtn.textContent = 'Delete Selected';
+  cookieDeleteBtn.type = 'button';
+  cookieDeleteBtn.style.marginLeft = '8px';
+  cookieDropdown.parentNode.insertBefore(cookieDeleteBtn, cookieDropdown.nextSibling);
+  function refreshCookieDropdown(sets, activeId) {
+    cookieDropdown.innerHTML = '';
+    sets.forEach(set => {
+      const opt = document.createElement('option');
+      opt.value = set.id;
+      opt.textContent = `${set.label} (${new Date(set.date).toLocaleString()})`;
+      if (set.id === activeId) opt.selected = true;
+      cookieDropdown.appendChild(opt);
+    });
+  }
+  async function loadCookiesUI() {
+    const store = await window.electronAPI.invoke('genspark-list-cookies');
+    refreshCookieDropdown(store.sets, store.activeId);
+    if (store.activeId) {
+      const active = store.sets.find(s => s.id === store.activeId);
+      if (active) cookieInput.value = JSON.stringify(active.cookies, null, 2);
+    }
+  }
+  cookieDropdown.addEventListener('change', async () => {
+    await window.electronAPI.invoke('genspark-set-active-cookies', cookieDropdown.value);
+    await loadCookiesUI();
+  });
+  cookieDeleteBtn.addEventListener('click', async () => {
+    if (!cookieDropdown.value) return;
+    await window.electronAPI.invoke('genspark-delete-cookies', cookieDropdown.value);
+    await loadCookiesUI();
+  });
+  if (cookieUpload) {
+    cookieUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        cookieInput.value = evt.target.result;
+      };
+      reader.readAsText(file);
+    });
+  }
+  // --- Modal for cookie label input ---
+function showLabelModal(defaultLabel = '') {
+  return new Promise((resolve) => {
+    let modal = document.getElementById('cookie-label-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'cookie-label-modal';
+      modal.style.position = 'fixed';
+      modal.style.left = 0;
+      modal.style.top = 0;
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.background = 'rgba(0,0,0,0.35)';
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.style.zIndex = 9999;
+      modal.innerHTML = `
+        <div style="background:#fff;padding:24px 32px;border-radius:8px;box-shadow:0 2px 12px #0003;min-width:320px;">
+          <label style="font-size:1rem;">Label for this cookie set:</label><br>
+          <input id="cookie-label-input" style="width:100%;margin:12px 0;padding:8px 4px;font-size:1rem;" value="${defaultLabel.replace(/"/g, '&quot;')}">
+          <div style="text-align:right;margin-top:8px;">
+            <button id="cookie-label-cancel" style="margin-right:12px;">Cancel</button>
+            <button id="cookie-label-ok" style="background:#1976d2;color:#fff;padding:6px 18px;border:none;border-radius:3px;">OK</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    const input = modal.querySelector('#cookie-label-input');
+    input.value = defaultLabel;
+    modal.style.display = 'flex';
+    input.focus();
+    function cleanup(val) {
+      modal.style.display = 'none';
+      resolve(val);
+    }
+    modal.querySelector('#cookie-label-ok').onclick = () => cleanup(input.value.trim() || 'Unnamed');
+    modal.querySelector('#cookie-label-cancel').onclick = () => cleanup(null);
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter') cleanup(input.value.trim() || 'Unnamed');
+      if (e.key === 'Escape') cleanup(null);
+    };
+  });
+}
+
+// --- Save Cookies Button ---
+if (cookieSaveBtn) {
+  cookieSaveBtn.addEventListener('click', async () => {
+    try {
+      const val = cookieInput.value.trim();
+      if (!val) throw new Error('No cookie data provided.');
+      let parsed;
+      try {
+        parsed = JSON.parse(val);
+      } catch(e) {
+        cookieStatus.textContent = 'Invalid JSON: ' + e.message;
+        cookieStatus.style.color = '#b00';
+        return;
+      }
+      if (!Array.isArray(parsed)) throw new Error('Cookie data must be a JSON array.');
+      const label = await showLabelModal('GenSpark Login');
+      if (!label) {
+        cookieStatus.textContent = 'Cookie save cancelled.';
+        cookieStatus.style.color = '#b00';
+        return;
+      }
+      await window.electronAPI.invoke('genspark-add-cookies', { label, cookies: parsed });
+      cookieStatus.textContent = 'Cookies saved successfully!';
+      cookieStatus.style.color = '#227';
+      await loadCookiesUI();
+    } catch(e) {
+      cookieStatus.textContent = 'Error: ' + e.message;
+      cookieStatus.style.color = '#b00';
+    }
+  });
+}
+  loadCookiesUI();
+
+  // Add extraction method toggle to Step 1 (Options)
+const step1 = document.getElementById('step-1');
+const testBtn = document.getElementById('test-genspark-btn');
+const extractionToggle = document.createElement('div');
+extractionToggle.style.marginTop = '12px';
+extractionToggle.innerHTML = `
+  <label style="margin-right:8px;">Extraction Method:</label>
+  <select id="extraction-method-select" style="font-size:1rem;">
+    <option value="clipboard">Clipboard</option>
+    <option value="dom">DOM Extraction</option>
+  </select>
+`;
+if (testBtn && testBtn.parentNode) {
+  testBtn.parentNode.insertBefore(extractionToggle, testBtn.nextSibling);
+}
+const extractionSelect = document.getElementById('extraction-method-select');
+
   document.getElementById('load-logo-btn').addEventListener('click', loadLogoToPreview);
   document.getElementById('delete-logo-btn').addEventListener('click', deleteSelectedLogo);
   document.getElementById('logo-upload').addEventListener('change', handleLogoUpload);
@@ -112,7 +308,11 @@ async function initApp() {
 
   // Show specified step and adjust nav visibility
   function showStep(step) {
-    console.log('[renderer] showStep', step);
+    console.log('[renderer] showStep called. step:', step, 'steps.length:', steps.length);
+    // Log visibility of each step
+    steps.forEach((el, idx) => {
+      console.log(`[renderer] Step ${idx} (id: ${el && el.id}): will be ${idx === step ? 'visible' : 'hidden'}`);
+    });
     // Update status display for debugging
     document.getElementById('status').textContent = `Step ${step + 1} of ${steps.length}`;
     currentStep = step;
@@ -128,14 +328,36 @@ async function initApp() {
   // Workflow navigation
   const prevBtn = document.getElementById('prev-btn');
   const nextBtn = document.getElementById('next-btn');
-  prevBtn.addEventListener('click', () => {
-    console.log('Prev clicked, currentStep:', currentStep);
-    if (currentStep > 0) showStep(currentStep - 1);
-  });
-  nextBtn.addEventListener('click', () => {
-    console.log('Next clicked, currentStep:', currentStep);
-    if (currentStep < steps.length - 1) showStep(currentStep + 1);
-  });
+
+  if (!prevBtn) {
+    console.warn('[renderer] Prev button not found in DOM!');
+  } else {
+    prevBtn.addEventListener('click', () => {
+      console.log('Prev clicked, currentStep:', currentStep);
+      if (currentStep > 0) showStep(currentStep - 1);
+      // Visual feedback
+      prevBtn.style.boxShadow = '0 0 0 3px #007bff55';
+      setTimeout(() => prevBtn.style.boxShadow = '', 200);
+    });
+  }
+
+  if (!nextBtn) {
+    console.warn('[renderer] Next button not found in DOM!');
+  } else {
+    console.log('[renderer] Next button event listener attached');
+    nextBtn.addEventListener('click', () => {
+      const prevStep = currentStep;
+      console.log('[renderer] Next clicked, currentStep:', currentStep);
+      if (currentStep < steps.length - 1) {
+        showStep(currentStep + 1);
+      } else {
+        // If click is received but navigation does not occur
+        nextBtn.style.boxShadow = '0 0 0 3px #ff000055';
+        setTimeout(() => nextBtn.style.boxShadow = '', 300);
+        console.warn('[renderer] Next button clicked, but already at last step.');
+      }
+    });
+  }
   document.getElementById('workflow-form').addEventListener('submit', (e) => {
     e.preventDefault();
   });

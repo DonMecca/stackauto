@@ -16,3 +16,7 @@ This directory contains documentation for SCAE.
 For setup and usage, see the main [`README.md`](../README.md).
 
 **Note:** Prompt and image strategy management is now robust, with dropdowns and editing fully powered by EasyMDE. See PROGRESS.md for recent changes.
+
+## April 2025 – Clipboard Extraction Issue
+
+We are currently debugging a timing/race condition affecting the clipboard extraction method in the GenSpark automation workflow. A polling-based clipboard read was implemented to improve reliability, but the clipboard content is still sometimes not detected. See PROGRESS.md for ongoing updates.

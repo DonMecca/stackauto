@@ -169,6 +169,14 @@
     <div class="step" id="step-0">
       <label for="appsumo-url">AppSumo Product URL:</label>
       <input type="text" id="appsumo-url" name="appsumo-url" required placeholder="https://appsumo.com/products/example" />
+      <fieldset style="border:1px solid #ccc;padding:10px;margin-top:18px;">
+        <legend><b>GenSpark Cookie Management</b></legend>
+        <div style="margin-bottom:8px;">Paste your exported GenSpark cookies (JSON array) here or upload a .json file:</div>
+        <textarea id="genspark-cookies-input" rows="6" style="width:100%;font-family:monospace;"></textarea>
+        <input type="file" id="genspark-cookies-upload" accept="application/json" style="margin-top:8px;" />
+        <button type="button" id="save-genspark-cookies-btn" style="margin-top:10px;">Save Cookies</button>
+        <div id="genspark-cookies-status" style="color:#227;margin-top:8px;font-size:0.96em;"></div>
+      </fieldset>
     </div>
     <div class="step" id="step-1" style="display:none;">
       <fieldset style="border:1px solid #ccc;padding:16px;margin-bottom:18px;">
@@ -183,9 +191,7 @@
         <textarea id="prompt-input" rows="8" style="width:100%;"></textarea>
         <!-- Prompt preview removed; use built-in EasyMDE preview -->
         <button type="button" id="save-prompt-btn">Save Prompt</button>
-        <div style="font-size:0.95em;color:#444;margin-top:6px;">
-          <b>Tip:</b> Use the <b>eye icon</b> in the toolbar to preview your markdown as rendered HTML.
-        </div>
+        <button type="button" id="test-genspark-btn" class="primary" style="margin-top:16px;">Test GenSpark Automation</button>
       </fieldset>
       <fieldset class="card">
         <legend><b>Feature Image Prompt</b></legend>
