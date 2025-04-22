@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 - Ongoing development, see `/docs/TASK_LIST.md` for current progress.
+- April 21-22, 2025: Major bugfixes for workflow navigation and cookie management (see `/docs/PROGRESS.md`).
+    - Fixed "Next" button unresponsiveness and step navigation logic in `renderer.js`.
+    - Cookie dropdown and selection UI now fully functional.
+    - Improved error handling and UI feedback for navigation/cookie actions.
 - Added clipboard polling logic to GenSpark automation for more reliable extraction.
 - Clipboard method still sometimes fails to detect the article due to timing/race condition; debugging ongoing.
 

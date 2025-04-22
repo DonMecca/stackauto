@@ -58,6 +58,8 @@
 - [ ] Write integration tests for publishing workflow
 
 ### 9. Workflow Orchestration
+- [✓] Fix workflow navigation ("Next"/"Previous" buttons, step transitions, UI feedback) [T] **(April 21-22, 2025: Complete, see PROGRESS.md)**
+- [✓] Debug and resolve cookie management UI and dropdown selection [T] **(April 21-22, 2025: Complete)**
 - [ ] Implement `WorkflowOrchestrator` to sequence all modules [T]
 - [ ] Ensure UI state reflects backend progress [T]
 - [ ] Add tests for full workflow (mocked APIs)
