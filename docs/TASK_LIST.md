@@ -52,10 +52,10 @@
 - [ ] Write tests for each image strategy and error/fallbacks
 
 ### 8. WordPress Integration
-- [ ] Implement `WordPressClient` (auth, media upload, post creation) [T]
-- [ ] Map categories/tags to IDs; handle missing terms [T]
-- [ ] Add comprehensive error handling and logging [T]
-- [ ] Write integration tests for publishing workflow
+- [✓] Implement `WordPressClient` (auth, media upload, post creation) [T] **(April 22, 2025: Complete, see PROGRESS.md)**
+- [✓] Map categories/tags to IDs; handle missing terms [T] **(April 22, 2025: Complete)**
+- [✓] Add comprehensive error handling and logging [T] **(April 22, 2025: Complete)**
+- [~] Write integration tests for publishing workflow
 
 ### 9. Workflow Orchestration
 - [✓] Fix workflow navigation ("Next"/"Previous" buttons, step transitions, UI feedback) [T] **(April 21-22, 2025: Complete, see PROGRESS.md)**

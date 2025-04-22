@@ -66,7 +66,29 @@ async function runGenSparkAutomation(appsumoUrl, promptTemplate, extractionMetho
   }
 
   if (extractionMethod === 'dom' || extractionMethod === 'both') {
-    domResult = await page.$eval('.conversation-item-desc.assistant', el => el.innerText);
+    // Get both innerText and innerHTML
+    // Try to extract the full article from 'div.desc > div.markdown-viewer'
+    let articleHandles = await page.$$('div.desc > div.markdown-viewer');
+    let candidates = [];
+    if (articleHandles.length === 0) {
+      // Fallback: all .markdown-viewer
+      articleHandles = await page.$$('.markdown-viewer');
+      console.log('[DOM Extraction] Fallback to .markdown-viewer, count:', articleHandles.length);
+    } else {
+      console.log('[DOM Extraction] Using div.desc > div.markdown-viewer, count:', articleHandles.length);
+    }
+    for (const handle of articleHandles) {
+      const html = await page.evaluate(el => el.innerHTML, handle);
+      const text = await page.evaluate(el => el.innerText, handle);
+      candidates.push({ html, text });
+    }
+    candidates.forEach((c, i) => {
+      console.log(`[DOM Extraction] Candidate #${i}: length=${c.html.length}, first200=`, c.html.slice(0,200));
+    });
+    // Pick the candidate with the largest HTML
+    let best = candidates.reduce((a, b) => (b.html.length > a.html.length ? b : a), { html: '', text: '' });
+    domResult = { html: best.html, text: best.text };
+    console.log('[DOM Extraction] Best HTML length:', best.html.length, 'First 200:', best.html.slice(0,200));
   }
 
   await browser.close();

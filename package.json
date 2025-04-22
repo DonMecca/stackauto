@@ -23,6 +23,8 @@
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "clipboardy": "^4.0.0",
     "electron-store": "^10.0.1",
-    "puppeteer": "^24.6.1"
+    "node-fetch": "^2.7.0",
+    "puppeteer": "^24.6.1",
+    "turndown": "^7.2.0"
   }
 }

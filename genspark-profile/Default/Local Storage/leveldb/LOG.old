@@ -1,6 +1,6 @@
-2025/04/21-09:44:49.752 50e4e39 Reusing MANIFEST /Users/jamalosman/dev/windsurf/sbauto/genspark-profile/Default/Local Storage/leveldb/MANIFEST-000001
-2025/04/21-09:44:49.757 50e4e39 Recovering log #10
-2025/04/21-09:44:49.758 50e4e39 Reusing old log /Users/jamalosman/dev/windsurf/sbauto/genspark-profile/Default/Local Storage/leveldb/000010.log 
-2025/04/21-09:45:49.770 50e4e3c Level-0 table #14: started
-2025/04/21-09:45:49.776 50e4e3c Level-0 table #14: 314804 bytes OK
-2025/04/21-09:45:49.780 50e4e3c Delete type=0 #10
+2025/04/21-22:58:20.040 51f0369 Reusing MANIFEST /Users/jamalosman/dev/windsurf/sbauto/genspark-profile/Default/Local Storage/leveldb/MANIFEST-000001
+2025/04/21-22:58:20.044 51f0369 Recovering log #26
+2025/04/21-22:58:20.044 51f0369 Reusing old log /Users/jamalosman/dev/windsurf/sbauto/genspark-profile/Default/Local Storage/leveldb/000026.log 
+2025/04/21-22:59:20.056 51f036c Level-0 table #30: started
+2025/04/21-22:59:20.064 51f036c Level-0 table #30: 316144 bytes OK
+2025/04/21-22:59:20.066 51f036c Delete type=0 #26

@@ -69,6 +69,7 @@ async function createClientsAndOrchestrator() {
   const wordpressClient = new WordPressClient({
     wordpressSiteUrl: await configManager.get('wordpressSiteUrl'),
     wordpressAppPassword: await configManager.get('wordpressAppPassword'),
+    wordpressUsername: await configManager.get('wordpressUsername'),
   });
   return new WorkflowOrchestrator({
     scraperService,
@@ -112,6 +113,60 @@ ipcMain.handle('genspark-save-cookies', async (event, cookies) => {
   } catch (e) {
     console.error('Failed to save GenSpark cookies:', e);
     return false;
+  }
+});
+
+// IPC: WordPress media upload
+ipcMain.handle('wordpress-upload-media', async (event, { imagePath, wordpressSiteUrl, wordpressAppPassword, wordpressUsername }) => {
+  try {
+    const wordpressClient = new WordPressClient({
+      wordpressSiteUrl,
+      wordpressAppPassword,
+      wordpressUsername,
+    });
+    return await wordpressClient.uploadMedia(imagePath);
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+// IPC: WordPress connection test
+ipcMain.handle('wordpress-test-connection', async (event, { wordpressSiteUrl, wordpressAppPassword, wordpressUsername }) => {
+  try {
+    const fetch = require('node-fetch');
+    const url = `${wordpressSiteUrl.replace(/\/$/, '')}/wp-json/wp/v2/users/me`;
+    const auth = Buffer.from(`${wordpressUsername}:${wordpressAppPassword}`).toString('base64');
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Basic ${auth}` }
+    });
+    if (res.ok) {
+      return { success: true };
+    } else {
+      let msg = `HTTP ${res.status}`;
+      try { const data = await res.json(); if (data && data.message) msg += ': ' + data.message; } catch {}
+      return { error: msg };
+    }
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+// IPC: WordPress post creation
+ipcMain.handle('wordpress-create-post', async (event, postData) => {
+  try {
+    const wordpressClient = new WordPressClient({
+      wordpressSiteUrl: postData.wordpressSiteUrl,
+      wordpressAppPassword: postData.wordpressAppPassword,
+      wordpressUsername: postData.wordpressUsername,
+    });
+    // Remove credentials before sending to API
+    const cleanPostData = { ...postData };
+    delete cleanPostData.wordpressSiteUrl;
+    delete cleanPostData.wordpressAppPassword;
+    delete cleanPostData.wordpressUsername;
+    return await wordpressClient.createPost(cleanPostData);
+  } catch (err) {
+    return { error: err.message };
   }
 });
 

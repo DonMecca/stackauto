@@ -1,6 +1,15 @@
-2025/04/21-09:57:50.270 50eeaa5 Reusing MANIFEST /Users/jamalosman/dev/windsurf/sbauto/genspark-profile/Default/Local Storage/leveldb/MANIFEST-000001
-2025/04/21-09:57:50.274 50eeaa5 Recovering log #13
-2025/04/21-09:57:50.274 50eeaa5 Reusing old log /Users/jamalosman/dev/windsurf/sbauto/genspark-profile/Default/Local Storage/leveldb/000013.log 
-2025/04/21-09:58:50.284 50eeaa7 Level-0 table #17: started
-2025/04/21-09:58:50.290 50eeaa7 Level-0 table #17: 319533 bytes OK
-2025/04/21-09:58:50.296 50eeaa7 Delete type=0 #13
+2025/04/21-23:34:38.305 52091e6 Reusing MANIFEST /Users/jamalosman/dev/windsurf/sbauto/genspark-profile/Default/Local Storage/leveldb/MANIFEST-000001
+2025/04/21-23:34:38.314 52091e6 Recovering log #29
+2025/04/21-23:34:38.315 52091e6 Reusing old log /Users/jamalosman/dev/windsurf/sbauto/genspark-profile/Default/Local Storage/leveldb/000029.log 
+2025/04/21-23:35:38.335 52091ea Level-0 table #33: started
+2025/04/21-23:35:38.342 52091ea Level-0 table #33: 316307 bytes OK
+2025/04/21-23:35:38.350 52091ea Delete type=0 #29
+2025/04/21-23:35:38.353 52091ea Compacting 4@0 + 1@1 files
+2025/04/21-23:35:38.358 52091ea Generated table #34@0: 18 keys, 316388 bytes
+2025/04/21-23:35:38.358 52091ea Compacted 4@0 + 1@1 files => 316388 bytes
+2025/04/21-23:35:38.359 52091ea compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/04/21-23:35:38.360 52091ea Delete type=2 #21
+2025/04/21-23:35:38.360 52091ea Delete type=2 #33
+2025/04/21-23:35:38.360 52091ea Delete type=2 #27
+2025/04/21-23:35:38.360 52091ea Delete type=2 #24
+2025/04/21-23:35:38.360 52091ea Delete type=2 #30

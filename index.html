@@ -122,6 +122,74 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
   <style id="override-css">
+    .saved-article-card {
+      border-radius: 8px;
+      box-shadow: 0 2px 8px #007bff18;
+      border: 1px solid #e4eaf0;
+      background: #f9fbff;
+      margin: 16px 0;
+      padding: 14px 18px 10px 18px;
+      transition: box-shadow 0.2s;
+      position: relative;
+    }
+    .saved-article-card:hover {
+      box-shadow: 0 4px 16px #007bff33;
+      border-color: #007bff44;
+    }
+    .saved-article-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .saved-article-title {
+      font-weight: bold;
+      font-size: 1.08em;
+      color: #0056b3;
+    }
+    .saved-article-date {
+      font-size: 0.95em;
+      color: #888;
+      margin-left: 12px;
+    }
+    .saved-article-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+    .saved-article-actions button {
+      background: #fff;
+      color: #007bff;
+      border: 1px solid #b3d1f7;
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 1.02em;
+      transition: background 0.2s, color 0.2s;
+      cursor: pointer;
+      outline: none;
+    }
+    .saved-article-actions button:hover {
+      background: #eaf3ff;
+      color: #0056b3;
+      border-color: #007bff;
+    }
+    .saved-article-snippet {
+      max-height: 110px;
+      overflow: auto;
+      font-size: 0.97em;
+      background: #fff;
+      border: 1px solid #e4eaf0;
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-top: 4px;
+      margin-bottom: 2px;
+    }
+    @media (max-width: 600px) {
+      .saved-article-card { padding: 7px 4px; }
+      .saved-article-header { flex-direction: column; align-items: flex-start; }
+      .saved-article-actions { gap: 5px; }
+    }
+
     /* Bring dropdowns to front for interaction */
     #prompt-select, #image-strategy-select {
       position: relative !important;
@@ -245,15 +313,49 @@
       </fieldset>
     </div>
     <div class="step" id="step-2" style="display:none;">
-      <textarea id="review-editor"></textarea>
-      <div style="margin-top:8px;">
-        <button type="button" id="toggle-preview-btn">Toggle Preview/Edit</button>
-      </div>
-      <!-- Review preview box removed; use built-in EasyMDE preview -->
+      <div id="review-html-editor" style="min-height:380px;height:48vh;max-width:900px;margin:0 auto 16px auto;"></div>
     </div>
     <div class="step" id="step-3" style="display:none;">
       <div id="publish-confirm">
         <p>Ready to publish this post to WordPress?</p>
+        <div id="wordpress-site-management" style="margin-bottom:22px;padding:18px 14px 10px 14px;background:#f7fafd;border-radius:8px;border:1px solid #e4eaf0;">
+          <h3 style="margin-top:0;">WordPress Sites</h3>
+          <div style="margin-bottom:7px;">
+            <label for="wp-site-select">Active Site:</label>
+            <select id="wp-site-select" style="font-size:1rem;"></select>
+            <button type="button" id="add-wp-site-btn">Add New</button>
+            <button type="button" id="load-wp-site-btn">Load</button>
+            <button type="button" id="edit-wp-site-btn">Edit</button>
+            <button type="button" id="delete-wp-site-btn" class="danger">Delete</button>
+          </div>
+          <div id="wp-site-form" style="display:none;margin-top:12px;">
+            <input type="hidden" id="wp-site-id" />
+            <div class="row">
+              <input type="text" id="wp-site-name" placeholder="Site Name" style="width:180px;margin-right:8px;" required />
+              <input type="text" id="wp-site-url" placeholder="Site URL (https://...)" style="width:220px;margin-right:8px;" required />
+              <input type="text" id="wp-site-username" placeholder="Username" style="width:140px;margin-right:8px;" required />
+              <input type="password" id="wp-site-password" placeholder="App Password" style="width:160px;" required />
+                <button type="button" id="toggle-wp-site-password" style="margin-left:4px;font-size:0.9em;">Show</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+              <button type="button" id="save-wp-site-btn" class="primary">Save Site</button>
+              <button type="button" id="cancel-wp-site-btn">Cancel</button>
+              <button type="button" id="test-wp-site-btn" class="secondary">Test Connection</button>
+              <span id="wp-site-connection-status" style="margin-left:10px;font-size:0.98em;"></span>
+            </div>
+            <div id="wp-site-help" style="margin-top:10px;display:none;background:#fff8e1;border:1px solid #ffe0b2;padding:10px 12px;border-radius:6px;font-size:0.97em;color:#b26a00;">
+              <b>Troubleshooting 401 Unauthorized:</b>
+              <ul style="margin:6px 0 0 16px;padding:0;">
+                <li>Double-check your <b>username</b> (not email) and <b>application password</b>.</li>
+                <li>Generate an app password in WordPress under <b>Users &gt; Profile &gt; Application Passwords</b>.</li>
+                <li>Ensure your site URL is correct and uses <b>https://</b>.</li>
+                <li>Some security plugins may block REST API or app passwords.</li>
+                <li>If using 2FA, use app passwords, not your main password.</li>
+                <li>If your site is behind HTTP Basic Auth or a firewall, REST API must be accessible.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
         <div id="publish-summary"></div>
       </div>
     </div>
@@ -267,6 +369,9 @@
   <div class="status">Status: <span id="status">Idle</span></div>
   <div id="error-log" style="margin-top:10px;color:#b00;font-size:0.97em;white-space:pre-wrap;background:#fff3f3;border:1px solid #fbb;padding:8px 12px;display:block;"></div>
 </div>
+<!-- TinyMCE CDN (must be loaded before tinymce.js) -->
+<script src="tinymce/js/tinymce/tinymce.min.js"></script>
+<script src="tinymce.js"></script>
 <script src="renderer.js"></script>
 </body>
 </html>
