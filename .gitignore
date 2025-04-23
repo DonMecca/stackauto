@@ -7,3 +7,21 @@ logs/
 .DS_Store
 .history.json
 config.json
+
+# Electron/Chromium profile and cache (prevents secret leaks)
+genspark-profile/
+Cache/
+Default/
+*.log
+*.bak
+*.tmp
+*.swp
+*.swo
+
+# Ignore binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+*.dat
