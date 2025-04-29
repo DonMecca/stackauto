@@ -1,10 +1,14 @@
 // renderer.js
-let promptMDE, imageMDE, reviewMDE;
+var promptMDE, imageMDE, reviewMDE;
+// Global navigation state for showStep/updateProgressBar
+var steps = [];
+var progress, progressLabels;
+var currentStep = 0;
 
 async function initApp() {
   // (1) Do NOT initialize steps/currentStep here! Wait until all DOM is ready and dynamic elements are inserted.
   console.log('[renderer] initApp() is running');
-  migrateLegacyStorage();
+  // migrateLegacyData already handled before initApp; removed erroneous call
   console.log('[renderer] initApp invoked');
   // Initialize editors
   try {
@@ -152,18 +156,12 @@ async function initApp() {
   const cookieUpload = document.getElementById('genspark-cookies-upload');
   const cookieSaveBtn = document.getElementById('save-genspark-cookies-btn');
   const cookieStatus = document.getElementById('genspark-cookies-status');
-  const cookieDropdown = document.createElement('select');
-  cookieDropdown.id = 'genspark-cookies-dropdown';
-  cookieDropdown.style.marginTop = '8px';
-  cookieInput.parentNode.insertBefore(cookieDropdown, cookieInput.nextSibling);
-  const cookieDeleteBtn = document.createElement('button');
-  cookieDeleteBtn.textContent = 'Delete Selected';
-  cookieDeleteBtn.type = 'button';
-  cookieDeleteBtn.style.marginLeft = '8px';
-  cookieDropdown.parentNode.insertBefore(cookieDeleteBtn, cookieDropdown.nextSibling);
+  const cookieDropdown = document.getElementById('genspark-cookies-dropdown');
+  const cookieDeleteBtn = document.getElementById('delete-genspark-cookies-btn');
   // Load and display cookie sets, and populate input
   async function loadCookiesUI() {
     const store = await window.electronAPI.invoke('genspark-list-cookies');
+    console.log('[CookieDebug] genspark-list-cookies returned:', store);
     refreshCookieDropdown(store.sets, store.activeId);
     if (store.activeId) {
       const active = store.sets.find(s => s.id === store.activeId);
@@ -171,6 +169,7 @@ async function initApp() {
     }
   }
   function refreshCookieDropdown(sets, activeId) {
+    console.log('[CookieDebug] refreshCookieDropdown sets:', sets, 'activeId:', activeId);
     cookieDropdown.innerHTML = '';
     sets.forEach(set => {
       const opt = document.createElement('option');
@@ -179,6 +178,12 @@ async function initApp() {
       if (set.id === activeId) opt.selected = true;
       cookieDropdown.appendChild(opt);
     });
+    if (!sets.length) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '(No cookies saved)';
+      cookieDropdown.appendChild(opt);
+    }
   }
   cookieDropdown.addEventListener('change', async () => {
     await window.electronAPI.invoke('genspark-set-active-cookies', cookieDropdown.value);
@@ -260,7 +265,14 @@ if (cookieSaveBtn) {
         cookieStatus.style.color = '#b00';
         return;
       }
-      if (!Array.isArray(parsed)) throw new Error('Cookie data must be a JSON array.');
+      // Allow object wrapper with cookies array
+      if (!Array.isArray(parsed)) {
+        if (parsed && Array.isArray(parsed.cookies)) {
+          parsed = parsed.cookies;
+        } else {
+          throw new Error('Cookie data must be an array or an object with a cookies array.');
+        }
+      }
       const label = await showLabelModal('GenSpark Login');
       if (!label) {
         cookieStatus.textContent = 'Cookie save cancelled.';
@@ -299,7 +311,7 @@ const extractionSelect = document.getElementById('extraction-method-select');
 
 // -------- Review Mode Toggle --------
 const toggleReviewBtn = document.getElementById('toggle-review-mode-btn');
-let reviewMode = localStorage.getItem('lastReviewMode') || 'html';
+var reviewMode = localStorage.getItem('lastReviewMode') || 'html';
 function updateReviewEditorMode(mode) {
   // HTML-only: always show TinyMCE editor
   document.getElementById('review-html-editor').style.display = '';
@@ -439,346 +451,11 @@ if (localStorage.getItem('lastExtractionMethod')) extractionSelect.value = local
   document.getElementById('featured-image-upload').addEventListener('change', handleFeaturedImageUpload);
 
   // Workflow navigation state
-  const steps = Array.from(document.querySelectorAll('.step'));
+  steps = Array.from(document.querySelectorAll('.step'));
   console.log('[DEBUG] initApp steps IDs:', steps.map(el => el.id));
-  const progress = document.getElementById('progress');
-  const progressLabels = document.querySelectorAll('.progress-label');
-  let currentStep = 0;
-
-  // --- WordPress Site Management ---
-  function getSavedWPSites() {
-    try {
-      return JSON.parse(localStorage.getItem('WordPressSites') || '[]');
-    } catch { return []; }
-  }
-  function saveWPSites(sites) {
-    localStorage.setItem('WordPressSites', JSON.stringify(sites));
-  }
-  function getActiveWPSiteId() {
-    return localStorage.getItem('ActiveWordPressSiteId');
-  }
-  function setActiveWPSiteId(id) {
-    localStorage.setItem('ActiveWordPressSiteId', id);
-  }
-  function populateWPSiteDropdown() {
-    const select = document.getElementById('wp-site-select');
-    const sites = getSavedWPSites();
-    select.innerHTML = '';
-    sites.forEach(site => {
-      const opt = document.createElement('option');
-      opt.value = site.id;
-      opt.textContent = site.name;
-      select.appendChild(opt);
-    });
-    const activeId = getActiveWPSiteId();
-    if (activeId && sites.some(s => s.id === activeId)) {
-      select.value = activeId;
-    } else if (sites.length) {
-      select.value = sites[0].id;
-      setActiveWPSiteId(sites[0].id);
-    }
-  }
-  function showWPSiteForm(editSite) {
-    const form = document.getElementById('wp-site-form');
-    if (!form) {
-      console.error('[WordPress] Form element not found');
-      return;
-    }
-    form.style.display = '';
-    // Defensive: clear all fields manually
-    const idField = document.getElementById('wp-site-id');
-    const nameField = document.getElementById('wp-site-name');
-    const urlField = document.getElementById('wp-site-url');
-    const userField = document.getElementById('wp-site-username');
-    const pwdField = document.getElementById('wp-site-password');
-    if (!idField || !nameField || !urlField || !userField || !pwdField) {
-      console.error('[WordPress] One or more input fields not found:', {idField, nameField, urlField, userField, pwdField});
-      return;
-    }
-    if (editSite) {
-      idField.value = editSite.id || '';
-      nameField.value = editSite.name || '';
-      urlField.value = editSite.url || '';
-      userField.value = editSite.username || '';
-      pwdField.value = editSite.password || '';
-    } else {
-      idField.value = '';
-      nameField.value = '';
-      urlField.value = '';
-      userField.value = '';
-      pwdField.value = '';
-    }
-  }
-  function hideWPSiteForm() {
-    const form = document.getElementById('wp-site-form');
-    if (form) form.style.display = 'none';
-  }
-  document.getElementById('wp-site-select').addEventListener('change', (e) => {
-    setActiveWPSiteId(e.target.value);
-    hideWPSiteForm();
-    clearWPSiteFormStatus();
-  });
-  document.getElementById('add-wp-site-btn').addEventListener('click', () => {
-    showWPSiteForm();
-    var nameField = document.getElementById('wp-site-name');
-    if (nameField) nameField.focus();
-    clearWPSiteFormStatus();
-  });
-  document.getElementById('load-wp-site-btn').addEventListener('click', () => {
-    const id = document.getElementById('wp-site-select').value;
-    const sites = getSavedWPSites();
-    const site = sites.find(s => s.id === id);
-    if (site) {
-      showWPSiteForm(site);
-      document.getElementById('wp-site-name').focus();
-      clearWPSiteFormStatus();
-    }
-  });
-  document.getElementById('edit-wp-site-btn').addEventListener('click', () => {
-    const id = document.getElementById('wp-site-select').value;
-    const sites = getSavedWPSites();
-    const site = sites.find(s => s.id === id);
-    if (site) {
-      showWPSiteForm(site);
-      document.getElementById('wp-site-name').focus();
-      clearWPSiteFormStatus();
-    }
-  });
-  document.getElementById('delete-wp-site-btn').addEventListener('click', () => {
-    const id = document.getElementById('wp-site-select').value;
-    let sites = getSavedWPSites();
-    sites = sites.filter(s => s.id !== id);
-    saveWPSites(sites);
-    if (sites.length) setActiveWPSiteId(sites[0].id);
-    else setActiveWPSiteId('');
-    populateWPSiteDropdown();
-    hideWPSiteForm();
-  });
-  function clearWPSiteFormStatus() {
-    document.getElementById('wp-site-connection-status').textContent = '';
-    document.getElementById('wp-site-help').style.display = 'none';
-  }
-  document.getElementById('save-wp-site-btn').addEventListener('click', () => {
-    const id = document.getElementById('wp-site-id').value || (Date.now() + '-' + Math.random().toString(36).slice(2));
-    const name = document.getElementById('wp-site-name').value.trim();
-    const url = document.getElementById('wp-site-url').value.trim();
-    const username = document.getElementById('wp-site-username').value.trim();
-    const password = document.getElementById('wp-site-password').value.trim();
-    if (!name || !url || !username || !password) {
-      document.getElementById('wp-site-connection-status').textContent = 'Please fill in all fields.';
-      document.getElementById('wp-site-connection-status').style.color = '#b00';
-      document.getElementById('wp-site-help').style.display = 'block';
-      return;
-    }
-    let sites = getSavedWPSites();
-    const existingIdx = sites.findIndex(s => s.id === id);
-    const newSite = { id, name, url, username, password };
-    if (existingIdx >= 0) sites[existingIdx] = newSite;
-    else sites.push(newSite);
-    saveWPSites(sites);
-    setActiveWPSiteId(id);
-    populateWPSiteDropdown();
-    hideWPSiteForm();
-    clearWPSiteFormStatus();
-  });
-  document.getElementById('cancel-wp-site-btn').addEventListener('click', () => {
-    hideWPSiteForm();
-    clearWPSiteFormStatus();
-  });
-  document.getElementById('toggle-wp-site-password').addEventListener('click', () => {
-    const pwdInput = document.getElementById('wp-site-password');
-    const toggleBtn = document.getElementById('toggle-wp-site-password');
-    if (pwdInput.type === 'password') {
-      pwdInput.type = 'text';
-      toggleBtn.textContent = 'Hide';
-    } else {
-      pwdInput.type = 'password';
-      toggleBtn.textContent = 'Show';
-    }
-  });
-  document.getElementById('test-wp-site-btn').addEventListener('click', async () => {
-    const url = document.getElementById('wp-site-url').value.trim();
-    const username = document.getElementById('wp-site-username').value.trim();
-    const password = document.getElementById('wp-site-password').value.trim();
-    const statusEl = document.getElementById('wp-site-connection-status');
-    statusEl.textContent = 'Testing...';
-    statusEl.style.color = '#444';
-    document.getElementById('wp-site-help').style.display = 'none';
-    if (!url || !username || !password) {
-      statusEl.textContent = 'Please fill in all fields.';
-      statusEl.style.color = '#b00';
-      document.getElementById('wp-site-help').style.display = 'block';
-      return;
-    }
-    // Try to fetch current user via WP REST API
-    try {
-      const res = await window.electronAPI.invoke('wordpress-test-connection', {
-        wordpressSiteUrl: url,
-        wordpressAppPassword: password,
-        wordpressUsername: username,
-      });
-      if (res && res.success) {
-        statusEl.textContent = 'Connection successful!';
-        statusEl.style.color = '#2e7d32';
-        document.getElementById('wp-site-help').style.display = 'none';
-      } else {
-        throw new Error(res && res.error ? res.error : 'Unknown error');
-      }
-    } catch (err) {
-      statusEl.textContent = 'Connection failed: ' + (err.message || err);
-      statusEl.style.color = '#b00';
-      document.getElementById('wp-site-help').style.display = 'block';
-    }
-  });
-
-  // On load, populate dropdown
-  populateWPSiteDropdown();
-
-  // --- WordPress Publish Step Logic ---
-  const publishSummary = document.getElementById('publish-summary');
-  const publishStep = document.getElementById('step-3');
-  const submitBtn = document.getElementById('submit-btn');
-  // Populate summary on entering publish step
-  function populatePublishSummary() {
-    // Example: summarize title, excerpt, image, etc.
-    let title = '';
-    let content = '';
-    let excerpt = '';
-    let featuredImageUrl = '';
-    let featuredImageFile = null;
-    try {
-      title = document.getElementById('prompt-title').value.trim() || '[Untitled]';
-    } catch {}
-    try {
-      // Try TinyMCE first, fallback to reviewMDE
-      if (window.tinymce && tinymce.activeEditor) {
-        content = tinymce.activeEditor.getContent();
-      } else if (window.reviewMDE) {
-        content = window.reviewMDE.value();
-      }
-    } catch {}
-    try {
-      excerpt = (content || '').replace(/<[^>]+>/g, '').slice(0, 180) + '...';
-    } catch {}
-    try {
-      featuredImageUrl = document.getElementById('featured-image-url').value.trim();
-    } catch {}
-    publishSummary.innerHTML = `<b>Title:</b> ${title}<br><b>Excerpt:</b> ${excerpt}<br><b>Featured Image:</b> ${featuredImageUrl ? featuredImageUrl : '[none]'}<br>`;
-  }
-  // On entering publish step, update summary
-  steps[3].addEventListener('show', populatePublishSummary);
-  // Or call on navigation
-  function onEnterPublishStep() {
-    populatePublishSummary();
-  }
-
-  // Submit handler for publishing
-  if (submitBtn) {
-    submitBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      const statusEl = document.getElementById('status');
-      statusEl.textContent = 'Publishing to WordPress...';
-      let title = document.getElementById('prompt-title').value.trim() || '[Untitled]';
-      let content = '';
-      if (window.tinymce && tinymce.activeEditor) {
-        content = tinymce.activeEditor.getContent();
-      } else if (window.reviewMDE) {
-        content = window.reviewMDE.value();
-      }
-      let excerpt = (content || '').replace(/<[^>]+>/g, '').slice(0, 180) + '...';
-      let featuredImageUrl = document.getElementById('featured-image-url').value.trim();
-      let featuredImageFile = document.getElementById('featured-image-upload').files[0] || null;
-      let featuredMediaId = null;
-      let featuredMediaSrc = '';
-      // --- Get Active WordPress Site ---
-      const activeSiteId = getActiveWPSiteId();
-      const sites = getSavedWPSites();
-      const wpSite = sites.find(s => s.id === activeSiteId);
-      if (!wpSite) {
-        statusEl.textContent = 'No active WordPress site selected.';
-        return;
-      }
-      try {
-        // 1. Upload featured image if file selected
-        if (featuredImageFile) {
-          // Save file to temp, get path
-          const arrayBuffer = await featuredImageFile.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const tempPath = require('os').tmpdir() + '/' + featuredImageFile.name;
-          await window.electronAPI.invoke('save-temp-file', { path: tempPath, buffer: buffer });
-          const mediaRes = await window.electronAPI.invoke('wordpress-upload-media', tempPath);
-          if (mediaRes.error) throw new Error(mediaRes.error);
-          featuredMediaId = mediaRes.mediaId;
-          featuredMediaSrc = mediaRes.url;
-        }
-        // 2. If only URL, skip upload
-        // 3. Create post with selected site credentials
-        const postData = {
-          title,
-          content,
-          excerpt,
-          status: 'publish',
-          featured_media: featuredMediaId || undefined,
-          wordpressSiteUrl: wpSite.url,
-          wordpressAppPassword: wpSite.password,
-          wordpressUsername: wpSite.username,
-        };
-        const postRes = await window.electronAPI.invoke('wordpress-create-post', postData);
-        if (postRes.error) throw new Error(postRes.error);
-        statusEl.textContent = `Published! View: ${postRes.url}`;
-        publishSummary.innerHTML += `<br><b>Success!</b> <a href="${postRes.url}" target="_blank">View Post</a>`;
-      } catch (err) {
-        statusEl.textContent = 'Publish failed: ' + (err.message || err);
-        publishSummary.innerHTML += `<br><span style="color:#b00">Error: ${err.message || err}</span>`;
-      }
-    });
-  }
-
-  // Update progress bar and labels
-  function updateProgressBar() {
-    const percent = (currentStep) / (steps.length - 1) * 100;
-    progress.style.width = percent + '%';
-    progressLabels.forEach((label, idx) => {
-      label.classList.toggle('active', idx === currentStep);
-      label.classList.toggle('done', idx < currentStep);
-    });
-  }
-
-  // Show specified step and adjust nav visibility
-  function showStep(step) {
-    // On entering publish step
-    if (step === 3) onEnterPublishStep();
-  console.log('[renderer] showStep called. step:', step, 'steps.length:', steps.length);
-  // Handle required attribute for appsumo-url
-  const appsumoInput = document.getElementById('appsumo-url');
-  if (typeof currentStep !== 'undefined' && appsumoInput) {
-    if (currentStep === 0 && step !== 0) {
-      // Leaving step 0, remove required
-      appsumoInput.removeAttribute('required');
-    } else if (currentStep !== 0 && step === 0) {
-      // Entering step 0, restore required
-      appsumoInput.setAttribute('required', true);
-    }
-  }
-  // Log visibility of each step
-  steps.forEach((el, idx) => {
-    console.log(`[renderer] Step ${idx} (id: ${el && el.id}): will be ${idx === step ? 'visible' : 'hidden'}`);
-  });
-  // Update status display for debugging
-  document.getElementById('status').textContent = `Step ${step + 1} of ${steps.length}`;
-  currentStep = step;
-  steps.forEach((el, idx) => {
-    el.style.display = idx === step ? '' : 'none';
-  });
-  document.getElementById('prev-btn').style.display = step > 0 ? '' : 'none';
-  document.getElementById('next-btn').style.display = step < steps.length - 1 ? '' : 'none';
-  document.getElementById('submit-btn').style.display = step === steps.length - 1 ? '' : 'none';
-  updateProgressBar();
-  // Always initialize TinyMCE when entering review step
-  if (step === 2 && window.initTinyMCE) {
-    window.initTinyMCE();
-  }
-}
+  progress = document.getElementById('progress');
+  progressLabels = document.querySelectorAll('.progress-label');
+  currentStep = 0;
 
   // Workflow navigation
   const prevBtn = document.getElementById('prev-btn');
@@ -821,27 +498,23 @@ if (localStorage.getItem('lastExtractionMethod')) extractionSelect.value = local
   showStep(0);
 }
 
-function migrateLegacyStorage() {
-  const promptOldKey = 'StackBountyPrompts';
-  const imageOldKey = 'StackBountyImageStrategies';
-  const newPromptKey = 'GenSparkPrompts';
-  const newImageKey = 'OpenAIImageStrategies';
-  const rawPrompts = localStorage.getItem(promptOldKey);
-  if (rawPrompts) {
-    localStorage.setItem(newPromptKey, rawPrompts);
-    console.log(`Migrated legacy prompts from ${promptOldKey}`);
+var migrationDone = false;
+async function onAppReady() {
+  if (!migrationDone) {
+    try {
+      const res = await window.electronAPI.invoke('migrate-legacy-cookies');
+      console.info('[Migration] Legacy data migration result:', res);
+      migrationDone = true;
+    } catch (e) {
+      console.warn('[Migration] Error migrating legacy data:', e);
+    }
   }
-  const rawStrategies = localStorage.getItem(imageOldKey);
-  if (rawStrategies) {
-    localStorage.setItem(newImageKey, rawStrategies);
-    console.log(`Migrated legacy image strategies from ${imageOldKey}`);
-  }
-}
-
-if (document.readyState !== 'loading') {
   initApp();
+}
+if (document.readyState !== 'loading') {
+  onAppReady();
 } else {
-  document.addEventListener('DOMContentLoaded', initApp);
+  window.addEventListener('DOMContentLoaded', onAppReady);
 }
 
 function styleToolbars() {
@@ -898,8 +571,8 @@ function handleLogoUrlPaste(e) {
     if (item.type.indexOf('image') !== -1) {
       const file = item.getAsFile();
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        saveLogoToStorage(file.name, ev.target.result);
+      reader.onload = (evt) => {
+        saveLogoToStorage(file.name, evt.target.result);
         populateLogoDropdown();
         document.getElementById('logo-select').value = getSavedLogos().slice(-1)[0].id;
         updateLogoFieldsFromDropdown();
@@ -1157,3 +830,172 @@ function deleteSelectedLogo() {
   deleteLogoFromStorage(sel.value);
   populateLogoDropdown();
 }
+
+// Update progress bar and labels
+function updateProgressBar() {
+  // Ensure nav variables
+  if (!progress) progress = document.getElementById('progress');
+  if (!progressLabels) progressLabels = document.querySelectorAll('.progress-label');
+  const percent = (currentStep) / (steps.length - 1) * 100;
+  if (progress) progress.style.width = percent + '%';
+  if (progressLabels) progressLabels.forEach((label, idx) => {
+    label.classList.toggle('active', idx === currentStep);
+    label.classList.toggle('done', idx < currentStep);
+  });
+}
+
+// Show specified step and adjust nav visibility
+function showStep(step) {
+  // Ensure nav variables
+  if (!steps || steps.length === 0) {
+    steps = Array.from(document.querySelectorAll('.step'));
+  }
+  if (!progress) {
+    progress = document.getElementById('progress');
+  }
+  if (!progressLabels || progressLabels.length === 0) {
+    progressLabels = document.querySelectorAll('.progress-label');
+  }
+  // On entering publish step
+  if (step === 3) onEnterPublishStep();
+  console.log('[renderer] showStep called. step:', step, 'steps.length:', steps.length);
+  // Handle required attribute for appsumo-url
+  const appsumoInput = document.getElementById('appsumo-url');
+  if (typeof currentStep !== 'undefined' && appsumoInput) {
+    if (currentStep === 0 && step !== 0) {
+      // Leaving step 0, remove required
+      appsumoInput.removeAttribute('required');
+    } else if (currentStep !== 0 && step === 0) {
+      // Entering step 0, restore required
+      appsumoInput.setAttribute('required', true);
+    }
+  }
+  // Log visibility of each step
+  steps.forEach((el, idx) => {
+    console.log(`[renderer] Step ${idx} (id: ${el && el.id}): will be ${idx === step ? 'visible' : 'hidden'}`);
+  });
+  // Update status display for debugging
+  document.getElementById('status').textContent = `Step ${step + 1} of ${steps.length}`;
+  currentStep = step;
+  steps.forEach((el, idx) => {
+    el.style.display = idx === step ? '' : 'none';
+  });
+  document.getElementById('prev-btn').style.display = step > 0 ? '' : 'none';
+  document.getElementById('next-btn').style.display = step < steps.length - 1 ? '' : 'none';
+  document.getElementById('submit-btn').style.display = step === steps.length - 1 ? '' : 'none';
+  updateProgressBar();
+  // Always initialize TinyMCE when entering review step
+  if (step === 2 && window.initTinyMCE) {
+    window.initTinyMCE();
+  }
+}
+
+  // --- WordPress Site Management ---
+  // Secure async WordPress Site storage via wpSiteStore
+// WordPress Site Management temporarily disabled in renderer (NodeIntegration off)
+// const wpSiteStore = require('./src/services/wpSiteStore');
+// async function getSavedWPSites() { return []; }
+// async function saveWPSites(sites) {}
+// async function getActiveWPSiteId() { return null; }
+// async function setActiveWPSiteId(id) {}
+
+  // On load, populate dropdown
+// populateWPSiteDropdown();
+
+  // --- WordPress Publish Step Logic ---
+  const publishSummary = document.getElementById('publish-summary');
+  const publishStep = document.getElementById('step-3');
+  const submitBtn = document.getElementById('submit-btn');
+  // Populate summary on entering publish step
+  function populatePublishSummary() {
+    // Example: summarize title, excerpt, image, etc.
+    let title = '';
+    let content = '';
+    let excerpt = '';
+    let featuredImageUrl = '';
+    let featuredImageFile = null;
+    try {
+      title = document.getElementById('prompt-title').value.trim() || '[Untitled]';
+    } catch {}
+    try {
+      // Try TinyMCE first, fallback to reviewMDE
+      if (window.tinymce && tinymce.activeEditor) {
+        content = tinymce.activeEditor.getContent();
+      } else if (window.reviewMDE) {
+        content = window.reviewMDE.value();
+      }
+    } catch {}
+    try {
+      excerpt = (content || '').replace(/<[^>]+>/g, '').slice(0, 180) + '...';
+    } catch {}
+    try {
+      featuredImageUrl = document.getElementById('featured-image-url').value.trim();
+    } catch {}
+    publishSummary.innerHTML = `<b>Title:</b> ${title}<br><b>Excerpt:</b> ${excerpt}<br><b>Featured Image:</b> ${featuredImageUrl ? featuredImageUrl : '[none]'}<br>`;
+  }
+  // Or call on navigation
+  function onEnterPublishStep() {
+    populatePublishSummary();
+  }
+
+  // Submit handler for publishing
+  if (submitBtn) {
+    submitBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = 'Publishing to WordPress...';
+      let title = document.getElementById('prompt-title').value.trim() || '[Untitled]';
+      let content = '';
+      if (window.tinymce && tinymce.activeEditor) {
+        content = tinymce.activeEditor.getContent();
+      } else if (window.reviewMDE) {
+        content = window.reviewMDE.value();
+      }
+      let excerpt = (content || '').replace(/<[^>]+>/g, '').slice(0, 180) + '...';
+      let featuredImageUrl = document.getElementById('featured-image-url').value.trim();
+      let featuredImageFile = document.getElementById('featured-image-upload').files[0] || null;
+      let featuredMediaId = null;
+      let featuredMediaSrc = '';
+      // --- Get Active WordPress Site ---
+      const activeSiteId = getActiveWPSiteId();
+      const sites = getSavedWPSites();
+      const wpSite = sites.find(s => s.id === activeSiteId);
+      if (!wpSite) {
+        statusEl.textContent = 'No active WordPress site selected.';
+        return;
+      }
+      try {
+        // 1. Upload featured image if file selected
+        if (featuredImageFile) {
+          // Save file to temp, get path
+          const arrayBuffer = await featuredImageFile.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const tempPath = require('os').tmpdir() + '/' + featuredImageFile.name;
+          await window.electronAPI.invoke('save-temp-file', { path: tempPath, buffer: buffer });
+          const mediaRes = await window.electronAPI.invoke('wordpress-upload-media', tempPath);
+          if (mediaRes.error) throw new Error(mediaRes.error);
+          featuredMediaId = mediaRes.mediaId;
+          featuredMediaSrc = mediaRes.url;
+        }
+        // 2. If only URL, skip upload
+        // 3. Create post with selected site credentials
+        const postData = {
+          title,
+          content,
+          excerpt,
+          status: 'publish',
+          featured_media: featuredMediaId || undefined,
+          wordpressSiteUrl: wpSite.url,
+          wordpressAppPassword: wpSite.password,
+          wordpressUsername: wpSite.username,
+        };
+        const postRes = await window.electronAPI.invoke('wordpress-create-post', postData);
+        if (postRes.error) throw new Error(postRes.error);
+        statusEl.textContent = `Published! View: ${postRes.url}`;
+        publishSummary.innerHTML += `<br><b>Success!</b> <a href="${postRes.url}" target="_blank">View Post</a>`;
+      } catch (err) {
+        statusEl.textContent = 'Publish failed: ' + (err.message || err);
+        publishSummary.innerHTML += `<br><span style="color:#b00">Error: ${err.message || err}</span>`;
+      }
+    });
+  }

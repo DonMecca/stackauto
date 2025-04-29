@@ -240,10 +240,12 @@
       <fieldset style="border:1px solid #ccc;padding:10px;margin-top:18px;">
         <legend><b>GenSpark Cookie Management</b></legend>
         <div style="margin-bottom:8px;">Paste your exported GenSpark cookies (JSON array) here or upload a .json file:</div>
-        <textarea id="genspark-cookies-input" rows="6" style="width:100%;font-family:monospace;"></textarea>
+        <textarea id="genspark-cookies-input" rows="6" style="width:100%;font-family:monospace;" placeholder="Enter JSON array of cookie objects, e.g. [{&quot;name&quot;:&quot;session&quot;,&quot;value&quot;:&quot;abc123&quot;,&quot;domain&quot;:&quot;example.com&quot;}]"></textarea>
         <input type="file" id="genspark-cookies-upload" accept="application/json" style="margin-top:8px;" />
-        <button type="button" id="save-genspark-cookies-btn" style="margin-top:10px;">Save Cookies</button>
+        <button type="button" id="save-genspark-cookies-btn" style="margin-top:10px;">Add Cookie Set</button>
         <div id="genspark-cookies-status" style="color:#227;margin-top:8px;font-size:0.96em;"></div>
+        <select id="genspark-cookies-dropdown" style="width:100%;margin-top:8px;"></select>
+        <button type="button" id="delete-genspark-cookies-btn" style="margin-left:8px;">Delete Selected</button>
       </fieldset>
     </div>
     <div class="step" id="step-1" style="display:none;">
