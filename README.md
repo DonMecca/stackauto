@@ -28,6 +28,17 @@ A cross-platform ElectronJS desktop app to automate the creation and publishing 
    npm start
    ```
 
+## Security & Data Storage
+
+Sensitive data (WordPress credentials, GenSpark cookies, API keys) is now stored securely using [electron-store](https://github.com/sindresorhus/electron-store) with strong encryption. **Plaintext storage is no longer used.**
+
+- **Encryption Key:** You must set the environment variable `STACKAUTO_ENCRYPT_KEY` for encryption to be enabled. Example:
+  ```bash
+  export STACKAUTO_ENCRYPT_KEY="your-strong-random-key"
+  npm start
+  ```
+- **One-Time Migration:** On first launch after upgrading, all legacy WordPress site data (from localStorage) and GenSpark cookies (from gensparkCookiesStore.json) will be automatically migrated to secure storage and the old file will be deleted.
+
 ## Usage
 - Input an AppSumo URL and select prompts/strategies.
 - Generate article and image, review, and post to WordPress.

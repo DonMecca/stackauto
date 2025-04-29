@@ -44,4 +44,28 @@
 - Next steps: deeper investigation into Puppeteer click reliability, alternative extraction methods, and user/system clipboard permissions.
 
 ---
+
+## April 29, 2025 – Image Strategy & Prompt Section Overhaul
+
+### Major Fixes and Enhancements
+- **Image Strategy Dropdown & Editor Wiring:**
+  - Refactored all event wiring (`change`, `Load`, `Delete`, `Save as New`) for image strategy dropdown and buttons to occur strictly inside `initApp`, preventing duplicate listeners and variable redeclaration errors.
+  - Removed all redundant global-level event bindings for image strategies, fixing the "Cannot redeclare block-scoped variable" errors.
+- **Auto-Loading & Editor Population:**
+  - Ensured that both GenSpark prompt and feature image prompt auto-load their content into their respective EasyMDE editors when entering the Options step and on app load.
+  - Improved `populateImageStrategyDropdown` and `updateImageStrategyFieldsFromDropdown` to robustly populate and refresh the EasyMDE editor when a strategy is selected.
+- **Debugging and Developer Experience:**
+  - Added detailed `console.log` debug output to all major dropdown and button handlers for easier troubleshooting.
+  - UI now clearly reflects changes in dropdown selection, and all editor refreshes are visible in real time.
+- **Button Functionality:**
+  - Fixed "Save as New Image Strategy" button so it reliably saves and switches to the new strategy.
+  - Load/Delete/Save buttons for image strategies are now fully responsive and update the UI instantly.
+- **General UX:**
+  - Dropdowns and editors are always in sync, and all state changes are immediately visible to the user.
+
+### Documentation & Next Steps
+- Updated `/docs/PROGRESS.md` and `/docs/README.md` to reflect all troubleshooting, fixes, and new best practices for dropdown/editor management.
+- Next: Continue to monitor for edge-case bugs and begin integrating OpenAI/GenSpark APIs.
+
+---
 **Commit this file with your next update to keep a running changelog.**

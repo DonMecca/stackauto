@@ -20,6 +20,7 @@ async function initApp() {
       minHeight: "180px"
     });
     styleToolbars();
+    // Ensure prompt field is loaded after EasyMDE is ready
   } catch (e) {
     displayError('EasyMDE failed to initialize prompt editor', e);
   }
@@ -33,6 +34,7 @@ async function initApp() {
       minHeight: "120px"
     });
     styleToolbars();
+    // Ensure image strategy field is loaded after EasyMDE is ready
   } catch (e) {
     displayError('EasyMDE failed to initialize image editor', e);
   }
@@ -56,12 +58,29 @@ async function initApp() {
   populatePromptDropdown();
   populateImageStrategyDropdown();
   populateLogoDropdown();
+  // Auto-load and refresh editors after dropdown population
+  updatePromptFieldsFromDropdown();
+  updateImageStrategyFieldsFromDropdown();
+  if (promptMDE && promptMDE.codemirror) promptMDE.codemirror.refresh();
+  if (imageMDE && imageMDE.codemirror) imageMDE.codemirror.refresh();
 
   // Wire prompt events
   document.getElementById('prompt-select').addEventListener('change', updatePromptFieldsFromDropdown);
   document.getElementById('load-prompt-btn').addEventListener('click', loadPromptToTextarea);
   document.getElementById('delete-prompt-btn').addEventListener('click', deleteSelectedPrompt);
   document.getElementById('save-prompt-btn').addEventListener('click', saveCurrentPrompt);
+
+  // Auto-load and wire feature image strategy controls
+  const imageStrategySelect = document.getElementById('image-strategy-select');
+  if (imageStrategySelect) {
+    imageStrategySelect.addEventListener('change', updateImageStrategyFieldsFromDropdown);
+  }
+  const loadImgBtn = document.getElementById('load-image-strategy-btn');
+  if (loadImgBtn) loadImgBtn.addEventListener('click', loadImageStrategyToTextarea);
+  const deleteImgBtn = document.getElementById('delete-image-strategy-btn');
+  if (deleteImgBtn) deleteImgBtn.addEventListener('click', deleteSelectedImageStrategy);
+  const saveImgBtn = document.getElementById('save-image-strategy-btn');
+  if (saveImgBtn) saveImgBtn.addEventListener('click', saveCurrentImageStrategy);
 
   // Wire up GenSpark automation test button
   document.getElementById('test-genspark-btn').addEventListener('click', async (e) => {
@@ -309,193 +328,61 @@ if (testBtn && testBtn.parentNode) {
 }
 const extractionSelect = document.getElementById('extraction-method-select');
 
-// -------- Review Mode Toggle --------
-const toggleReviewBtn = document.getElementById('toggle-review-mode-btn');
-var reviewMode = localStorage.getItem('lastReviewMode') || 'html';
-function updateReviewEditorMode(mode) {
-  // HTML-only: always show TinyMCE editor
-  document.getElementById('review-html-editor').style.display = '';
-  localStorage.setItem('lastReviewMode', 'html');
-}
-// Set initial mode
-updateReviewEditorMode('html');
+// Enable direct navigation via progress bar labels
+document.querySelectorAll('.progress-label').forEach(label => {
+  label.style.cursor = 'pointer';
+  label.addEventListener('click', () => {
+    const step = parseInt(label.dataset.step, 10);
+    showStep(step);
+  });
+});
 
-// -------- Saved Articles UI --------
-const savedArticlesBtn = document.createElement('button');
-savedArticlesBtn.textContent = 'Show Saved Articles';
-savedArticlesBtn.type = 'button';
-savedArticlesBtn.style.marginLeft = '18px';
-const reviewStep = document.getElementById('step-2');
-reviewStep.insertBefore(savedArticlesBtn, reviewStep.firstChild);
-const savedArticlesPanel = document.createElement('div');
-savedArticlesPanel.style.display = 'none';
-savedArticlesPanel.style.border = '1px solid #ccc';
-savedArticlesPanel.style.background = '#f8f8f8';
-savedArticlesPanel.style.padding = '12px';
-savedArticlesPanel.style.marginBottom = '18px';
-savedArticlesPanel.innerHTML = '<b>Saved Articles</b><br><div id="saved-articles-list"></div>';
-reviewStep.insertBefore(savedArticlesPanel, savedArticlesBtn.nextSibling);
-savedArticlesBtn.onclick = () => {
-  savedArticlesPanel.style.display = savedArticlesPanel.style.display === 'none' ? '' : 'none';
-  renderSavedArticlesList();
-};
-function escapeHtml(str) {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/`/g, '&#96;')
-    .replace(/=/g, '&#61;')
-    .replace(/\//g, '&#47;');
-}
+// Workflow navigation state
+steps = Array.from(document.querySelectorAll('.step'));
+console.log('[DEBUG] initApp steps IDs:', steps.map(el => el.id));
+progress = document.getElementById('progress');
+progressLabels = document.querySelectorAll('.progress-label');
+currentStep = 0;
 
-function renderSavedArticlesList() {
-  const listDiv = savedArticlesPanel.querySelector('#saved-articles-list');
-  const articles = JSON.parse(localStorage.getItem('SavedArticles') || '[]');
-  if (articles.length === 0) {
-    listDiv.innerHTML = '<i>No saved articles.</i>';
-    return;
-  }
-  listDiv.innerHTML = articles.map((a, i) => {
-    const snippet = a.html ? escapeHtml(a.html.slice(0, 200)) : '<i>[No HTML]</i>';
-    return `
-      <div class="saved-article-card">
-        <div class="saved-article-header">
-          <span class="saved-article-title">${escapeHtml(a.title)}</span>
-          <span class="saved-article-date">${new Date(a.date).toLocaleString()}</span>
-        </div>
-        <div class="saved-article-actions">
-          <button data-load="${i}" title="Load into Editor"><i class="fa fa-sign-in"></i></button>
-          <button data-retest="${i}" title="Retest Display"><i class="fa fa-refresh"></i></button>
-          <button data-delete="${i}" title="Delete Article"><i class="fa fa-trash"></i></button>
-          <button data-toggle-full="${i}" title="Show Full Article">Show Full Article</button>
-        </div>
-        <div id="article-html-${i}" class="saved-article-snippet">${snippet}</div>
-      </div>`;
-  }).join('');
-  listDiv.querySelectorAll('button[data-toggle-full]').forEach(btn => {
-    btn.onclick = () => {
-      const idx = +btn.getAttribute('data-toggle-full');
-      const div = document.getElementById('article-html-' + idx);
-      const art = articles[idx];
-      if (btn.textContent === 'Show Full Article') {
-        // Show raw HTML (not escaped)
-        div.innerHTML = art.html || '<i>[No HTML]</i>';
-        div.style.maxHeight = '300px';
-        btn.textContent = 'Show Snippet';
-      } else {
-        // Show escaped snippet
-        div.innerHTML = art.html ? escapeHtml(art.html.slice(0,200)) : '<i>[No HTML]</i>';
-        div.style.maxHeight = '80px';
-        btn.textContent = 'Show Full Article';
-      }
-    };
-  });
-  listDiv.querySelectorAll('button[data-load]').forEach(btn => {
-    btn.onclick = () => {
-      const idx = +btn.getAttribute('data-load');
-      const art = articles[idx];
-      window.initTinyMCE(art.html);
-      savedArticlesPanel.style.display = 'none';
-    };
-  });
-  // Retest Display: reload article into editor and update status, without API call
-  listDiv.querySelectorAll('button[data-retest]').forEach(btn => {
-    btn.onclick = () => {
-      const idx = +btn.getAttribute('data-retest');
-      const art = articles[idx];
-      window.initTinyMCE(art.html);
-      // Remove required from appsumo-url input to prevent focus error
-      document.getElementById('appsumo-url').removeAttribute('required');
-      showStep(2);
-      document.getElementById('status').textContent = 'Retest: Displayed saved article in review editor.';
-    };
-  });
-  listDiv.querySelectorAll('button[data-delete]').forEach(btn => {
-    btn.onclick = () => {
-      const idx = +btn.getAttribute('data-delete');
-      articles.splice(idx, 1);
-      localStorage.setItem('SavedArticles', JSON.stringify(articles));
-      renderSavedArticlesList();
-    };
+// Workflow navigation
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+console.log('[DEBUG] initApp prevBtn, nextBtn:', prevBtn, nextBtn);
+
+if (!prevBtn) {
+  console.warn('[renderer] Prev button not found in DOM!');
+} else {
+  prevBtn.addEventListener('click', () => {
+    console.log('Prev clicked, currentStep:', currentStep);
+    if (currentStep > 0) showStep(currentStep - 1);
+    // Visual feedback
+    prevBtn.style.boxShadow = '0 0 0 3px #007bff55';
+    setTimeout(() => prevBtn.style.boxShadow = '', 200);
   });
 }
-// -------- Persist Last-Used Prompts & Settings --------
-function persistSelect(id, key) {
-  const el = document.getElementById(id);
-  el.addEventListener('change', () => localStorage.setItem(key, el.value));
-  const last = localStorage.getItem(key);
-  if (last) el.value = last;
-}
-persistSelect('prompt-select', 'lastPrompt');
-persistSelect('image-strategy-select', 'lastImageStrategy');
-persistSelect('extraction-method-select', 'lastExtractionMethod');
-// On app load, restore last-used prompt/image strategy/extraction method
-if (localStorage.getItem('lastPrompt')) document.getElementById('prompt-select').value = localStorage.getItem('lastPrompt');
-if (localStorage.getItem('lastImageStrategy')) document.getElementById('image-strategy-select').value = localStorage.getItem('lastImageStrategy');
-if (localStorage.getItem('lastExtractionMethod')) extractionSelect.value = localStorage.getItem('lastExtractionMethod');
 
-  document.getElementById('load-logo-btn').addEventListener('click', loadLogoToPreview);
-  document.getElementById('delete-logo-btn').addEventListener('click', deleteSelectedLogo);
-  document.getElementById('logo-upload').addEventListener('change', handleLogoUpload);
-  document.getElementById('logo-url').addEventListener('change', handleLogoUrlInput);
-  document.getElementById('logo-url').addEventListener('paste', handleLogoUrlPaste);
-
-  // Wire featured image events
-  const urlInput = document.getElementById('featured-image-url');
-  urlInput.addEventListener('paste', handleFeaturedImagePaste);
-  urlInput.addEventListener('change', handleFeaturedImageUrlChange);
-  document.getElementById('featured-image-upload').addEventListener('change', handleFeaturedImageUpload);
-
-  // Workflow navigation state
-  steps = Array.from(document.querySelectorAll('.step'));
-  console.log('[DEBUG] initApp steps IDs:', steps.map(el => el.id));
-  progress = document.getElementById('progress');
-  progressLabels = document.querySelectorAll('.progress-label');
-  currentStep = 0;
-
-  // Workflow navigation
-  const prevBtn = document.getElementById('prev-btn');
-  const nextBtn = document.getElementById('next-btn');
-  console.log('[DEBUG] initApp prevBtn, nextBtn:', prevBtn, nextBtn);
-
-  if (!prevBtn) {
-    console.warn('[renderer] Prev button not found in DOM!');
-  } else {
-    prevBtn.addEventListener('click', () => {
-      console.log('Prev clicked, currentStep:', currentStep);
-      if (currentStep > 0) showStep(currentStep - 1);
-      // Visual feedback
-      prevBtn.style.boxShadow = '0 0 0 3px #007bff55';
-      setTimeout(() => prevBtn.style.boxShadow = '', 200);
-    });
-  }
-
-  if (!nextBtn) {
-    console.warn('[renderer] Next button not found in DOM!');
-  } else {
-    console.log('[renderer] Next button event listener attached');
-    nextBtn.addEventListener('click', () => {
-      const prevStep = currentStep;
-      console.log('[renderer] Next clicked, currentStep:', currentStep);
-      if (currentStep < steps.length - 1) {
-        showStep(currentStep + 1);
-      } else {
-        // If click is received but navigation does not occur
-        nextBtn.style.boxShadow = '0 0 0 3px #ff000055';
-        setTimeout(() => nextBtn.style.boxShadow = '', 300);
-        console.warn('[renderer] Next button clicked, but already at last step.');
-      }
-    });
-  }
-  document.getElementById('workflow-form').addEventListener('submit', (e) => {
-    e.preventDefault();
+if (!nextBtn) {
+  console.warn('[renderer] Next button not found in DOM!');
+} else {
+  console.log('[renderer] Next button event listener attached');
+  nextBtn.addEventListener('click', () => {
+    const prevStep = currentStep;
+    console.log('[renderer] Next clicked, currentStep:', currentStep);
+    if (currentStep < steps.length - 1) {
+      showStep(currentStep + 1);
+    } else {
+      // If click is received but navigation does not occur
+      nextBtn.style.boxShadow = '0 0 0 3px #ff000055';
+      setTimeout(() => nextBtn.style.boxShadow = '', 300);
+      console.warn('[renderer] Next button clicked, but already at last step.');
+    }
   });
+}
+document.getElementById('workflow-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+});
 
-  showStep(0);
+showStep(0);
 }
 
 var migrationDone = false;
@@ -638,7 +525,7 @@ function getSavedPrompts() {
     ];
     console.log('Seeding default prompts');
     arr = defaultPrompts;
-    localStorage.setItem(newKey, JSON.stringify(defaultPrompts));
+    localStorage.setItem('GenSparkPrompts', JSON.stringify(defaultPrompts));
   }
   return arr.map(p => {
     const id = p.id || (p.name || p.title || 'prompt').toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
@@ -672,7 +559,6 @@ function populatePromptDropdown() {
   if (prompts.length > 0) {
     select.value = prompts[0].id;
     document.getElementById('error-log').textContent = `Loaded ${prompts.length} prompts.`;
-    if (promptMDE) updatePromptFieldsFromDropdown();
   } else {
     document.getElementById('error-log').textContent = `No prompts found.`;
   }
@@ -680,9 +566,11 @@ function populatePromptDropdown() {
 function updatePromptFieldsFromDropdown() {
   const select = document.getElementById('prompt-select');
   const prompts = getSavedPrompts();
-  const found = prompts.find(p => p.id === select.value);
-  document.getElementById('prompt-title').value = found ? found.name : '';
-  promptMDE.value(found ? found.content : '');
+  const found = prompts.find(p => p.id === select.value) || {};
+  document.getElementById('prompt-title').value = found.name || '';
+  // Set content via EasyMDE API and refresh
+  promptMDE.value(found.content || '');
+  if (promptMDE.codemirror) promptMDE.codemirror.refresh();
 }
 function loadPromptToTextarea() { updatePromptFieldsFromDropdown(); }
 function deleteSelectedPrompt() {
@@ -730,8 +618,13 @@ function getSavedImageStrategies() {
       { name: 'Logo Integration', promptContent: 'Overlay the logo at {{logo_url}} onto an image of {{product_name}}.' }
     ];
     console.log('Seeding default image strategies');
-    arr = defaultStrategies;
-    localStorage.setItem(newKey, JSON.stringify(defaultStrategies));
+    const initialized = defaultStrategies.map(s => ({
+      id: s.name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now(),
+      name: s.name,
+      promptContent: s.promptContent
+    }));
+    arr = initialized;
+    localStorage.setItem(newKey, JSON.stringify(arr));
   }
   return arr.map(s => {
     const id = s.id || (s.name || s.title || 'strategy').toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
@@ -755,6 +648,7 @@ function deleteImageStrategyFromStorage(id) {
   window.electronAPI.invoke('config-set', { key: 'OpenAIImageStrategies', value: strategies });
 }
 function populateImageStrategyDropdown() {
+  console.log('[DEBUG] populateImageStrategyDropdown - strategies:', getSavedImageStrategies());
   const select = document.getElementById('image-strategy-select');
   const strategies = getSavedImageStrategies();
   select.innerHTML = '<option value="">Select an image strategy</option>';
@@ -762,19 +656,26 @@ function populateImageStrategyDropdown() {
   if (strategies.length > 0) {
     select.value = strategies[0].id;
     document.getElementById('error-log').textContent = `Loaded ${strategies.length} image strategies.`;
-    if (imageMDE) updateImageStrategyFieldsFromDropdown();
+    updateImageStrategyFieldsFromDropdown();
+    if (imageMDE && imageMDE.codemirror) imageMDE.codemirror.refresh();
   } else {
     document.getElementById('error-log').textContent = `No image strategies found.`;
   }
 }
 function updateImageStrategyFieldsFromDropdown() {
   const select = document.getElementById('image-strategy-select');
+  console.log('[DEBUG] updateImageStrategyFieldsFromDropdown - selected id:', select.value);
   const strategies = getSavedImageStrategies();
-  const found = strategies.find(s => s.id === select.value);
-  document.getElementById('image-strategy-title').value = found ? found.name : '';
-  imageMDE.value(found ? found.promptContent : '');
+  const found = strategies.find(s => s.id === select.value) || {};
+  console.log('[DEBUG] updateImageStrategyFieldsFromDropdown - found:', found);
+  document.getElementById('image-strategy-title').value = found.name || '';
+  imageMDE.value(found.promptContent || '');
+  if (imageMDE.codemirror) imageMDE.codemirror.refresh();
 }
-function loadImageStrategyToTextarea() { updateImageStrategyFieldsFromDropdown(); }
+function loadImageStrategyToTextarea() {
+  console.log('[DEBUG] loadImageStrategyToTextarea clicked');
+  updateImageStrategyFieldsFromDropdown();
+}
 function deleteSelectedImageStrategy() {
   const sel = document.getElementById('image-strategy-select'); if (sel.value) {
     deleteImageStrategyFromStorage(sel.value);
@@ -784,12 +685,15 @@ function deleteSelectedImageStrategy() {
 function saveCurrentImageStrategy() {
   const name = document.getElementById('image-strategy-title').value.trim();
   const content = imageMDE.value().trim();
+  console.log('[DEBUG] saveCurrentImageStrategy - name:', name, 'content:', content);
   if (!name) return alert('Please enter a title for this image strategy.');
   if (!content) return alert('Please enter image prompt content.');
   saveImageStrategyToStorage(name, content);
   populateImageStrategyDropdown();
   const strategies = getSavedImageStrategies();
   document.getElementById('image-strategy-select').value = strategies[strategies.length-1].id;
+  updateImageStrategyFieldsFromDropdown();
+  if (imageMDE && imageMDE.codemirror) imageMDE.codemirror.refresh();
 }
 
 // Logo Management
@@ -856,6 +760,7 @@ function showStep(step) {
   if (!progressLabels || progressLabels.length === 0) {
     progressLabels = document.querySelectorAll('.progress-label');
   }
+
   // On entering publish step
   if (step === 3) onEnterPublishStep();
   console.log('[renderer] showStep called. step:', step, 'steps.length:', steps.length);
@@ -884,9 +789,35 @@ function showStep(step) {
   document.getElementById('next-btn').style.display = step < steps.length - 1 ? '' : 'none';
   document.getElementById('submit-btn').style.display = step === steps.length - 1 ? '' : 'none';
   updateProgressBar();
+  if (step === 1) {
+    updatePromptFieldsFromDropdown();
+    updateImageStrategyFieldsFromDropdown();
+    if (promptMDE && promptMDE.codemirror) promptMDE.codemirror.refresh();
+    if (imageMDE && imageMDE.codemirror) imageMDE.codemirror.refresh();
+    // Auto-refresh featured image preview
+    updateFeaturedImagePreview();
+  }
   // Always initialize TinyMCE when entering review step
   if (step === 2 && window.initTinyMCE) {
     window.initTinyMCE();
+  }
+}
+
+// Update featured image preview based on current URL or uploaded file
+function updateFeaturedImagePreview() {
+  const url = document.getElementById('featured-image-url').value.trim();
+  const fileInput = document.getElementById('featured-image-upload');
+  const img = document.getElementById('featured-image-preview');
+  if (url) {
+    img.src = url;
+    img.style.display = '';
+  } else if (fileInput && fileInput.files[0]) {
+    const reader = new FileReader();
+    reader.onload = (ev) => { img.src = ev.target.result; img.style.display = ''; };
+    reader.readAsDataURL(fileInput.files[0]);
+  } else {
+    img.src = '';
+    img.style.display = 'none';
   }
 }
 
@@ -999,3 +930,150 @@ function showStep(step) {
       }
     });
   }
+
+  document.getElementById('load-logo-btn').addEventListener('click', loadLogoToPreview);
+  document.getElementById('delete-logo-btn').addEventListener('click', deleteSelectedLogo);
+  document.getElementById('logo-upload').addEventListener('change', handleLogoUpload);
+  document.getElementById('logo-url').addEventListener('change', handleLogoUrlInput);
+  document.getElementById('logo-url').addEventListener('paste', handleLogoUrlPaste);
+
+  // Wire featured image events
+  const urlInput = document.getElementById('featured-image-url');
+  urlInput.addEventListener('paste', handleFeaturedImagePaste);
+  urlInput.addEventListener('change', handleFeaturedImageUrlChange);
+  document.getElementById('featured-image-upload').addEventListener('change', handleFeaturedImageUpload);
+
+  // Persist Last-Used Prompts & Settings --------
+function persistSelect(id, key) {
+  const el = document.getElementById(id);
+  el.addEventListener('change', () => localStorage.setItem(key, el.value));
+  const last = localStorage.getItem(key);
+  if (last) el.value = last;
+}
+persistSelect('prompt-select', 'lastPrompt');
+persistSelect('image-strategy-select', 'lastImageStrategy');
+persistSelect('extraction-method-select', 'lastExtractionMethod');
+// Restore last-used values
+if (localStorage.getItem('lastPrompt')) document.getElementById('prompt-select').value = localStorage.getItem('lastPrompt');
+if (localStorage.getItem('lastImageStrategy')) document.getElementById('image-strategy-select').value = localStorage.getItem('lastImageStrategy');
+if (localStorage.getItem('lastExtractionMethod')) extractionSelect.value = localStorage.getItem('lastExtractionMethod');
+// Auto-load and refresh editors after restoring selections
+updatePromptFieldsFromDropdown();
+updateImageStrategyFieldsFromDropdown();
+if (promptMDE && promptMDE.codemirror) promptMDE.codemirror.refresh();
+if (imageMDE && imageMDE.codemirror) imageMDE.codemirror.refresh();
+
+  // -------- Review Mode Toggle --------
+const toggleReviewBtn = document.getElementById('toggle-review-mode-btn');
+var reviewMode = localStorage.getItem('lastReviewMode') || 'html';
+function updateReviewEditorMode(mode) {
+  // HTML-only: always show TinyMCE editor
+  document.getElementById('review-html-editor').style.display = '';
+  localStorage.setItem('lastReviewMode', 'html');
+}
+// Set initial mode
+updateReviewEditorMode('html');
+
+// -------- Saved Articles UI --------
+const savedArticlesBtn = document.createElement('button');
+savedArticlesBtn.textContent = 'Show Saved Articles';
+savedArticlesBtn.type = 'button';
+savedArticlesBtn.style.marginLeft = '18px';
+const reviewStep = document.getElementById('step-2');
+reviewStep.insertBefore(savedArticlesBtn, reviewStep.firstChild);
+const savedArticlesPanel = document.createElement('div');
+savedArticlesPanel.style.display = 'none';
+savedArticlesPanel.style.border = '1px solid #ccc';
+savedArticlesPanel.style.background = '#f8f8f8';
+savedArticlesPanel.style.padding = '12px';
+savedArticlesPanel.style.marginBottom = '18px';
+savedArticlesPanel.innerHTML = '<b>Saved Articles</b><br><div id="saved-articles-list"></div>';
+reviewStep.insertBefore(savedArticlesPanel, savedArticlesBtn.nextSibling);
+savedArticlesBtn.onclick = () => {
+  savedArticlesPanel.style.display = savedArticlesPanel.style.display === 'none' ? '' : 'none';
+  renderSavedArticlesList();
+};
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/`/g, '&#96;')
+    .replace(/=/g, '&#61;')
+    .replace(/\//g, '&#47;');
+}
+
+function renderSavedArticlesList() {
+  const listDiv = savedArticlesPanel.querySelector('#saved-articles-list');
+  const articles = JSON.parse(localStorage.getItem('SavedArticles') || '[]');
+  if (articles.length === 0) {
+    listDiv.innerHTML = '<i>No saved articles.</i>';
+    return;
+  }
+  listDiv.innerHTML = articles.map((a, i) => {
+    const snippet = a.html ? escapeHtml(a.html.slice(0, 200)) : '<i>[No HTML]</i>';
+    return `
+      <div class="saved-article-card">
+        <div class="saved-article-header">
+          <span class="saved-article-title">${escapeHtml(a.title)}</span>
+          <span class="saved-article-date">${new Date(a.date).toLocaleString()}</span>
+        </div>
+        <div class="saved-article-actions">
+          <button data-load="${i}" title="Load into Editor"><i class="fa fa-sign-in"></i></button>
+          <button data-retest="${i}" title="Retest Display"><i class="fa fa-refresh"></i></button>
+          <button data-delete="${i}" title="Delete Article"><i class="fa fa-trash"></i></button>
+          <button data-toggle-full="${i}" title="Show Full Article">Show Full Article</button>
+        </div>
+        <div id="article-html-${i}" class="saved-article-snippet">${snippet}</div>
+      </div>`;
+  }).join('');
+  listDiv.querySelectorAll('button[data-toggle-full]').forEach(btn => {
+    btn.onclick = () => {
+      const idx = +btn.getAttribute('data-toggle-full');
+      const div = document.getElementById('article-html-' + idx);
+      const art = articles[idx];
+      if (btn.textContent === 'Show Full Article') {
+        // Show raw HTML (not escaped)
+        div.innerHTML = art.html || '<i>[No HTML]</i>';
+        div.style.maxHeight = '300px';
+        btn.textContent = 'Show Snippet';
+      } else {
+        // Show escaped snippet
+        div.innerHTML = art.html ? escapeHtml(art.html.slice(0,200)) : '<i>[No HTML]</i>';
+        div.style.maxHeight = '80px';
+        btn.textContent = 'Show Full Article';
+      }
+    };
+  });
+  listDiv.querySelectorAll('button[data-load]').forEach(btn => {
+    btn.onclick = () => {
+      const idx = +btn.getAttribute('data-load');
+      const art = articles[idx];
+      window.initTinyMCE(art.html);
+      savedArticlesPanel.style.display = 'none';
+    };
+  });
+  // Retest Display: reload article into editor and update status, without API call
+  listDiv.querySelectorAll('button[data-retest]').forEach(btn => {
+    btn.onclick = () => {
+      const idx = +btn.getAttribute('data-retest');
+      const art = articles[idx];
+      window.initTinyMCE(art.html);
+      // Remove required from appsumo-url input to prevent focus error
+      document.getElementById('appsumo-url').removeAttribute('required');
+      showStep(2);
+      document.getElementById('status').textContent = 'Retest: Displayed saved article in review editor.';
+    };
+  });
+  listDiv.querySelectorAll('button[data-delete]').forEach(btn => {
+    btn.onclick = () => {
+      const idx = +btn.getAttribute('data-delete');
+      articles.splice(idx, 1);
+      localStorage.setItem('SavedArticles', JSON.stringify(articles));
+      renderSavedArticlesList();
+    };
+  });
+}
