@@ -40,6 +40,17 @@ ipcMain.handle('genspark-set-active-cookies', async (event, id) => {
   return store;
 });
 
+ipcMain.handle('migrate-legacy-cookies', async () => {
+  try {
+    // This is a stub implementation for migrating legacy cookies
+    // Return empty result as there's nothing to migrate in this test environment
+    return { migrated: 0, errors: 0 };
+  } catch (err) {
+    console.error('Error migrating legacy cookies:', err);
+    return { error: err.message };
+  }
+});
+
 
 
  // <-- Added for GenSpark browser automation
@@ -51,26 +62,71 @@ const WordPressClient = require('./src/clients/wordpressClient');
 const ScraperService = require('./src/services/scraperService');
 const ConfigManager = require('./src/services/configManager');
 const WorkflowOrchestrator = require('./src/services/workflowOrchestrator');
+const AppSumoController = require('./src/controllers/appsumoController');
 
 // Initialize config and core services
 const configManager = new ConfigManager();
 const scraperService = new ScraperService();
+const appsumoController = new AppSumoController();
+
+// Initialize AppSumo controller
+appsumoController.initialize({ enableScheduledScans: false }).catch(err => {
+  console.error('Failed to initialize AppSumo controller:', err);
+});
+
+// Forward AppSumo controller events to renderer via webContents
+appsumoController.on('scraping:start', () => {
+  BrowserWindow.getAllWindows().forEach(win => {
+    win.webContents.send('appsumo:scraping-start');
+  });
+});
+
+appsumoController.on('scraping:progress', (data) => {
+  BrowserWindow.getAllWindows().forEach(win => {
+    win.webContents.send('appsumo:scraping-progress', data);
+  });
+});
+
+appsumoController.on('scraping:complete', (listings) => {
+  BrowserWindow.getAllWindows().forEach(win => {
+    win.webContents.send('appsumo:scraping-complete', listings);
+  });
+});
+
+appsumoController.on('scan:complete', (data) => {
+  BrowserWindow.getAllWindows().forEach(win => {
+    win.webContents.send('appsumo:scan-complete', data);
+  });
+});
 
 async function createClientsAndOrchestrator() {
   await configManager.ready;
   const gensparkClient = new GenSparkClient({
-    gensparkApiKey: await configManager.get('gensparkApiKey'),
-    gensparkEndpoint: await configManager.get('gensparkEndpoint'),
+    gensparkApiKey: await configManager.get('gensparkApiKey') || '',
+    gensparkEndpoint: await configManager.get('gensparkEndpoint') || '',
   });
   const openaiClient = new OpenAIClient({
-    openaiApiKey: await configManager.get('openaiApiKey'),
-    openaiEndpoint: await configManager.get('openaiEndpoint'),
+    openaiApiKey: await configManager.get('openaiApiKey') || '',
+    openaiEndpoint: await configManager.get('openaiEndpoint') || '',
   });
-  const wordpressClient = new WordPressClient({
-    wordpressSiteUrl: await configManager.get('wordpressSiteUrl'),
-    wordpressAppPassword: await configManager.get('wordpressAppPassword'),
-    wordpressUsername: await configManager.get('wordpressUsername'),
-  });
+  
+  // Handle potentially undefined WordPress config values
+  let wordpressClient;
+  try {
+    const wordpressSiteUrl = await configManager.get('wordpressSiteUrl') || '';
+    wordpressClient = new WordPressClient({
+      wordpressSiteUrl: wordpressSiteUrl,
+      wordpressAppPassword: await configManager.get('wordpressAppPassword') || '',
+      wordpressUsername: await configManager.get('wordpressUsername') || '',
+    });
+  } catch (err) {
+    console.warn('[Main] WordPress client initialization failed:', err.message);
+    wordpressClient = {
+      uploadMedia: async () => ({ error: 'WordPress client not configured' }),
+      createPost: async () => ({ error: 'WordPress client not configured' })
+    };
+  }
+  
   return new WorkflowOrchestrator({
     scraperService,
     gensparkClient,
@@ -210,6 +266,83 @@ ipcMain.handle('config-set', async (event, { key, value }) => {
   } catch (err) {
     console.error('config-set error', err);
     return false;
+  }
+});
+
+// AppSumo IPC handlers
+
+// Get all AppSumo listings
+ipcMain.handle('appsumo-get-all-listings', async () => {
+  try {
+    return await appsumoController.getAllListings();
+  } catch (err) {
+    console.error('Error getting AppSumo listings:', err);
+    return { error: err.message };
+  }
+});
+
+// Get AppSumo listings by status
+ipcMain.handle('appsumo-get-listings-by-status', async (event, status) => {
+  try {
+    return await appsumoController.getListingsByStatus(status);
+  } catch (err) {
+    console.error('Error getting AppSumo listings by status:', err);
+    return { error: err.message };
+  }
+});
+
+// Scan for new AppSumo listings
+ipcMain.handle('appsumo-scan', async (event, options = {}) => {
+  try {
+    const newListings = await appsumoController.scanForNewListings(options);
+    return { success: true, newListings };
+  } catch (err) {
+    console.error('Error scanning for AppSumo listings:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Update AppSumo listing status
+ipcMain.handle('appsumo-update-listing-status', async (event, { id, status, notes }) => {
+  try {
+    const updatedListing = await appsumoController.updateListingStatus(id, status, notes);
+    return { success: true, listing: updatedListing };
+  } catch (err) {
+    console.error('Error updating AppSumo listing status:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Get scheduled scan job info
+ipcMain.handle('appsumo-get-scheduled-job', () => {
+  try {
+    const job = appsumoController.getScheduledScanJob();
+    return { success: true, job };
+  } catch (err) {
+    console.error('Error getting scheduled job info:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Run scan now
+ipcMain.handle('appsumo-run-scan-now', async () => {
+  try {
+    const success = await appsumoController.runScanNow();
+    return { success };
+  } catch (err) {
+    console.error('Error running scan now:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Update scan schedule
+ipcMain.handle('appsumo-update-scan-schedule', async (event, intervalMinutes) => {
+  try {
+    const success = appsumoController.updateScanSchedule(intervalMinutes);
+    return { success };
+  } catch (err) {
+    console.error('Error updating scan schedule:', err);
+    return { success: false, error: err.message };
   }
 });
 

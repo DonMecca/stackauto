@@ -5,6 +5,9 @@ var steps = [];
 var progress, progressLabels;
 var currentStep = 0;
 
+// AppSumo UI functionality will be loaded via script tag
+// and accessed through the global appSumoUI variable
+
 async function initApp() {
   // (1) Do NOT initialize steps/currentStep here! Wait until all DOM is ready and dynamic elements are inserted.
   console.log('[renderer] initApp() is running');
@@ -179,12 +182,27 @@ async function initApp() {
   const cookieDeleteBtn = document.getElementById('delete-genspark-cookies-btn');
   // Load and display cookie sets, and populate input
   async function loadCookiesUI() {
-    const store = await window.electronAPI.invoke('genspark-list-cookies');
-    console.log('[CookieDebug] genspark-list-cookies returned:', store);
-    refreshCookieDropdown(store.sets, store.activeId);
-    if (store.activeId) {
-      const active = store.sets.find(s => s.id === store.activeId);
-      if (active) cookieInput.value = JSON.stringify(active.cookies, null, 2);
+    console.log('[CookieDebug] Loading cookies UI...');
+    try {
+      const store = await window.electronAPI.invoke('genspark-list-cookies');
+      console.log('[CookieDebug] genspark-list-cookies returned:', store);
+      
+      if (!store || !Array.isArray(store.sets)) {
+        console.error('[CookieDebug] Invalid cookie store format:', store);
+        cookieStatus.textContent = 'Error: Invalid cookie store format';
+        cookieStatus.style.color = '#b00';
+        return;
+      }
+      
+      refreshCookieDropdown(store.sets, store.activeId);
+      if (store.activeId) {
+        const active = store.sets.find(s => s.id === store.activeId);
+        if (active) cookieInput.value = JSON.stringify(active.cookies, null, 2);
+      }
+    } catch (err) {
+      console.error('[CookieDebug] Error loading cookies:', err);
+      cookieStatus.textContent = 'Error loading cookies: ' + err.message;
+      cookieStatus.style.color = '#b00';
     }
   }
   function refreshCookieDropdown(sets, activeId) {
@@ -396,7 +414,28 @@ async function onAppReady() {
       console.warn('[Migration] Error migrating legacy data:', e);
     }
   }
-  initApp();
+  await initApp();
+  
+  // Initialize AppSumo UI with error handling
+  try {
+    console.log('Initializing AppSumo UI...');
+    if (typeof appSumoUI === 'undefined') {
+      console.error('appSumoUI is undefined! Script may not be loaded correctly.');
+    } else {
+      appSumoUI.initAppSumoUI();
+      console.log('AppSumo UI initialized successfully.');
+    }
+  } catch (err) {
+    console.error('Error initializing AppSumo UI:', err);
+  }
+  
+  // Add AppSumo tab button to the UI with error handling
+  try {
+    addAppSumoTabButton();
+    console.log('AppSumo tab button added successfully.');
+  } catch (err) {
+    console.error('Error adding AppSumo tab button:', err);
+  }
 }
 if (document.readyState !== 'loading') {
   onAppReady();
@@ -1004,6 +1043,127 @@ function escapeHtml(str) {
     .replace(/`/g, '&#96;')
     .replace(/=/g, '&#61;')
     .replace(/\//g, '&#47;');
+}
+
+// Add AppSumo tab button to the app header
+function addAppSumoTabButton() {
+  const appHeader = document.querySelector('h1');
+  if (!appHeader) {
+    console.error('Could not find app header to add navigation buttons');
+    return;
+  }
+  
+  // Create navigation bar if it doesn't exist yet
+  let navBar = document.querySelector('.app-nav-bar');
+  if (!navBar) {
+    navBar = document.createElement('div');
+    navBar.className = 'app-nav-bar';
+    navBar.style.cssText = 'display: flex; justify-content: center; margin: 20px 0; gap: 15px;';
+    
+    // Insert nav bar after the header
+    appHeader.parentNode.insertBefore(navBar, appHeader.nextSibling);
+    
+    // Add CSS for the nav buttons if not already added
+    if (!document.getElementById('app-nav-styles')) {
+      const style = document.createElement('style');
+      style.id = 'app-nav-styles';
+      style.textContent = `
+        .app-nav-bar { display: flex; justify-content: center; margin: 20px 0; gap: 15px; }
+        .app-nav-btn { 
+          background: #f0f0f0; 
+          border: 1px solid #ddd; 
+          transition: all 0.2s;
+          padding: 8px 16px; 
+          border-radius: 4px; 
+          cursor: pointer; 
+          font-weight: bold;
+        }
+        .app-nav-btn.active { 
+          background: #007bff; 
+          color: white; 
+          border-color: #0056b3;
+        }
+        .app-nav-btn:hover:not(.active) { 
+          background: #e3e3e3; 
+          border-color: #ccc;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+  
+  // Create workflow button if it doesn't exist yet
+  let workflowBtn = navBar.querySelector('.app-nav-btn[data-tab="workflow"]');
+  if (!workflowBtn) {
+    workflowBtn = document.createElement('button');
+    workflowBtn.textContent = 'Content Workflow';
+    workflowBtn.className = 'app-nav-btn active';
+    workflowBtn.setAttribute('data-tab', 'workflow');
+    navBar.appendChild(workflowBtn);
+  }
+  
+  // Create AppSumo button if it doesn't exist yet
+  let appsumoBtn = navBar.querySelector('.app-nav-btn[data-tab="appsumo"]');
+  if (!appsumoBtn) {
+    appsumoBtn = document.createElement('button');
+    appsumoBtn.textContent = 'AppSumo Deals';
+    appsumoBtn.className = 'app-nav-btn';
+    appsumoBtn.setAttribute('data-tab', 'appsumo');
+    navBar.appendChild(appsumoBtn);
+  }
+  
+  // Add click handler for workflow button
+  workflowBtn.addEventListener('click', () => {
+    switchToTab('workflow');
+  });
+  
+  // Add click handler for AppSumo button
+  appsumoBtn.addEventListener('click', () => {
+    switchToTab('appsumo');
+  });
+  
+  // Also set up the "Browse AppSumo listings" link
+  const browseLink = document.getElementById('open-appsumo-tab');
+  if (browseLink) {
+    browseLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchToTab('appsumo');
+    });
+  }
+}
+
+// Function to switch between tabs
+function switchToTab(tabId) {
+  // Update nav button states
+  const navButtons = document.querySelectorAll('.app-nav-btn');
+  navButtons.forEach(btn => {
+    if (btn.getAttribute('data-tab') === tabId) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  
+  // Show/hide the appropriate content
+  if (tabId === 'workflow') {
+    // Show workflow, hide AppSumo
+    document.getElementById('workflow-form').style.display = 'block';
+    const appsumoTab = document.getElementById('appsumo-tab');
+    if (appsumoTab) appsumoTab.style.display = 'none';
+  } else if (tabId === 'appsumo') {
+    // Hide workflow, show AppSumo
+    document.getElementById('workflow-form').style.display = 'none';
+    const appsumoTab = document.getElementById('appsumo-tab');
+    if (appsumoTab) {
+      appsumoTab.style.display = 'block';
+      // Refresh AppSumo listings when switching to tab
+      if (window.appSumoUI && typeof window.appSumoUI.loadAppSumoListings === 'function') {
+        window.appSumoUI.loadAppSumoListings();
+      }
+    } else {
+      console.error('AppSumo tab element not found in the DOM');
+    }
+  }
 }
 
 function renderSavedArticlesList() {

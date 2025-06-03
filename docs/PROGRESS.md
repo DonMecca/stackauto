@@ -1,5 +1,23 @@
 # SCAE Progress Log
 
+## June 2025
+
+### AppSumo Scraper Integration (June 3)
+- Successfully integrated AppSumo scraper functionality into the main Electron application:
+  - Added tab navigation UI with buttons to switch between Content Workflow and AppSumo Deals.
+  - Created simplified `appsumo-renderer-simple.js` that's compatible with Electron's contextIsolation.
+  - Added IPC handlers for all AppSumo-related functionality including listing retrieval and scanning.
+  - Improved error handling for cookie management with better status messages and fallbacks.
+  - Fixed issue with missing `gensparkCookiesStore.json` file that prevented cookie loading.
+- Enhanced WordPress client integration:
+  - Added graceful fallbacks for WordPress client initialization when configuration is missing.
+  - Prevented app crashes due to missing WordPress site information.
+  - Improved error messaging for configuration issues.
+- Added UI enhancements:
+  - Added "Browse AppSumo listings" link in the main content form for quick tab switching.
+  - Implemented cleaner tab navigation with status feedback.
+  - Fixed UI transitions between different application sections.
+
 ## April 2025
 
 ### Workflow Navigation and Cookie Management (April 21-22)

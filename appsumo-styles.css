@@ -1,0 +1,145 @@
+/* AppSumo Listings UI Styles */
+
+/* Tab Navigation */
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e4eaf0;
+  padding-bottom: 10px;
+}
+
+.tab-btn {
+  background: #f2f2f2;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px 16px;
+  margin-right: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: #007bff;
+  color: white;
+  border-color: #0056b3;
+}
+
+.tab-btn:hover:not(.active) {
+  background: #e3e3e3;
+  border-color: #ccc;
+}
+
+/* Listing Cards */
+.appsumo-listing-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #007bff18;
+  border: 1px solid #e4eaf0;
+  background: #f9fbff;
+  margin: 16px 0;
+  padding: 16px;
+  transition: box-shadow 0.2s;
+}
+
+.appsumo-listing-card:hover {
+  box-shadow: 0 4px 16px #007bff33;
+  border-color: #007bff44;
+}
+
+.listing-header {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 12px;
+}
+
+.listing-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e4eaf0;
+}
+
+.listing-title-container {
+  flex: 1;
+}
+
+.listing-title {
+  margin: 0 0 6px 0;
+  font-size: 1.3em;
+  color: #0056b3;
+}
+
+.listing-price {
+  color: #28a745;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.listing-url a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.listing-url a:hover {
+  text-decoration: underline;
+}
+
+.listing-details {
+  padding: 12px 0;
+  border-top: 1px solid #e4eaf0;
+  border-bottom: 1px solid #e4eaf0;
+  margin-bottom: 12px;
+}
+
+.listing-description {
+  color: #555;
+  line-height: 1.5;
+}
+
+.listing-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-select {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 0.9em;
+}
+
+.notes-input {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 0.9em;
+}
+
+.update-status-btn, .process-listing-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background 0.2s;
+}
+
+.update-status-btn {
+  background: #007bff;
+  color: white;
+}
+
+.update-status-btn:hover {
+  background: #0056b3;
+}
+
+.process-listing-btn {
+  background: #28a745;
+  color: white;
+}
+
+.process-listing-btn:hover {
+  background: #218838;
+}

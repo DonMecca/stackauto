@@ -8,10 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 - Ongoing development, see `/docs/TASK_LIST.md` for current progress.
+- June 3, 2025: Successfully integrated AppSumo scraper into main Electron app (see `/docs/PROGRESS.md`).
+    - Added tab navigation between Content Workflow and AppSumo Deals.
+    - Created simplified AppSumo renderer script compatible with Electron's contextIsolation.
+    - Fixed cookie loading and handling for both GenSpark and AppSumo.
+    - Improved error handling for WordPressClient with graceful fallbacks.
+    - Added "Browse AppSumo listings" link in the main form.
 - April 21-22, 2025: Major bugfixes for workflow navigation and cookie management (see `/docs/PROGRESS.md`).
     - Fixed "Next" button unresponsiveness and step navigation logic in `renderer.js`.
     - Cookie dropdown and selection UI now fully functional.
     - Improved error handling and UI feedback for navigation/cookie actions.
+- Auto-load GenSpark prompt and image strategy on dropdown selection for immediate field population.
+- Progress bar labels are now clickable for direct section navigation between workflow steps.
 - Added clipboard polling logic to GenSpark automation for more reliable extraction.
 - Clipboard method still sometimes fails to detect the article due to timing/race condition; debugging ongoing.
 

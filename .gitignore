@@ -3,6 +3,9 @@ node_modules/
 dist/
 artifacts/
 logs/
+coverage/
+output/
+temp/
 .env
 .DS_Store
 .history.json

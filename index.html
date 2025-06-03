@@ -121,6 +121,7 @@
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+  <link rel="stylesheet" href="appsumo-styles.css">
   <style id="override-css">
     .saved-article-card {
       border-radius: 8px;
@@ -235,8 +236,13 @@
   </div>
   <form id="workflow-form">
     <div class="step" id="step-0">
-      <label for="appsumo-url">AppSumo Product URL:</label>
-      <input type="text" id="appsumo-url" name="appsumo-url" required placeholder="https://appsumo.com/products/example" />
+      <div>
+        <label for="appsumo-url">AppSumo Product URL:</label>
+        <input type="text" id="appsumo-url" placeholder="https://appsumo.com/products/example">
+        <div style="margin-top: 5px; font-size: 0.9em; color: #0056b3;">
+          <a href="#" id="open-appsumo-tab">Browse AppSumo listings</a>
+        </div>
+      </div>
       <fieldset style="border:1px solid #ccc;padding:10px;margin-top:18px;">
         <legend><b>GenSpark Cookie Management</b></legend>
         <div style="margin-bottom:8px;">Paste your exported GenSpark cookies (JSON array) here or upload a .json file:</div>
@@ -371,9 +377,88 @@
   <div class="status">Status: <span id="status">Idle</span></div>
   <div id="error-log" style="margin-top:10px;color:#b00;font-size:0.97em;white-space:pre-wrap;background:#fff3f3;border:1px solid #fbb;padding:8px 12px;display:block;"></div>
 </div>
+
+<!-- AppSumo UI Component -->
+<div id="appsumo-tab" style="display:none;">
+  <h2>AppSumo Deals Manager</h2>
+  
+  <div class="card">
+    <legend><b>Scan Controls</b></legend>
+    <div class="row">
+      <button type="button" id="appsumo-scan-btn" class="primary">Scan for New Listings</button>
+      <div id="appsumo-scan-status">Status: Idle</div>
+    </div>
+    <div class="row" style="margin-top: 10px;">
+      <label for="appsumo-scan-schedule">
+        <input type="checkbox" id="appsumo-enable-schedule" /> Enable scheduled scanning
+      </label>
+      <select id="appsumo-scan-schedule" style="margin-left: 10px;">
+        <option value="30">Every 30 minutes</option>
+        <option value="60">Every hour</option>
+        <option value="180">Every 3 hours</option>
+        <option value="360">Every 6 hours</option>
+        <option value="720">Every 12 hours</option>
+        <option value="1440">Every 24 hours</option>
+      </select>
+      <button type="button" id="appsumo-update-schedule-btn">Update Schedule</button>
+    </div>
+    <div class="tip">
+      Scanning will fetch the latest AppSumo deals. You can also schedule automatic scanning.
+    </div>
+  </div>
+  
+  <div class="card">
+    <legend><b>AppSumo Listings</b></legend>
+    <div class="tabs">
+      <button type="button" class="tab-btn active" data-tab="new">New</button>
+      <button type="button" class="tab-btn" data-tab="processing">Processing</button>
+      <button type="button" class="tab-btn" data-tab="published">Published</button>
+      <button type="button" class="tab-btn" data-tab="rejected">Rejected</button>
+      <button type="button" class="tab-btn" data-tab="all">All</button>
+    </div>
+    
+    <div id="appsumo-listings-container">
+      <!-- Listings will be populated here -->
+      <div id="no-listings-message" style="text-align: center; margin: 30px 0; color: #666;">
+        No listings found. Click "Scan for New Listings" to get started.
+      </div>
+    </div>
+  </div>
+  
+  <!-- Listing Template (hidden, will be cloned by JS) -->
+  <template id="appsumo-listing-template">
+    <div class="appsumo-listing-card">
+      <div class="listing-header">
+        <img class="listing-image" src="" alt="Product thumbnail">
+        <div class="listing-title-container">
+          <h3 class="listing-title"></h3>
+          <div class="listing-price"></div>
+          <div class="listing-url"><a href="#" target="_blank">View on AppSumo</a></div>
+        </div>
+      </div>
+      <div class="listing-details">
+        <div class="listing-description"></div>
+      </div>
+      <div class="listing-actions">
+        <select class="status-select">
+          <option value="new">New</option>
+          <option value="processing">Processing</option>
+          <option value="published">Published</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <input type="text" class="notes-input" placeholder="Add notes here...">
+        <button type="button" class="update-status-btn primary">Update</button>
+        <button type="button" class="process-listing-btn">Process</button>
+      </div>
+    </div>
+  </template>
+</div>
+
 <!-- TinyMCE CDN (must be loaded before tinymce.js) -->
 <script src="tinymce/js/tinymce/tinymce.min.js"></script>
 <script src="tinymce.js"></script>
+<!-- Load AppSumo simplified renderer before main renderer -->
+<script src="appsumo-renderer-simple.js"></script>
 <script src="renderer.js"></script>
 </body>
 </html>
