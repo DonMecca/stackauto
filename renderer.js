@@ -970,24 +970,43 @@ function updateFeaturedImagePreview() {
     });
   }
 
-  document.getElementById('load-logo-btn').addEventListener('click', loadLogoToPreview);
-  document.getElementById('delete-logo-btn').addEventListener('click', deleteSelectedLogo);
-  document.getElementById('logo-upload').addEventListener('change', handleLogoUpload);
-  document.getElementById('logo-url').addEventListener('change', handleLogoUrlInput);
-  document.getElementById('logo-url').addEventListener('paste', handleLogoUrlPaste);
+  const loadLogoBtn = document.getElementById('load-logo-btn');
+  if (loadLogoBtn) loadLogoBtn.addEventListener('click', loadLogoToPreview);
+
+  const deleteLogoBtn = document.getElementById('delete-logo-btn');
+  if (deleteLogoBtn) deleteLogoBtn.addEventListener('click', deleteSelectedLogo);
+
+  const logoUpload = document.getElementById('logo-upload');
+  if (logoUpload) logoUpload.addEventListener('change', handleLogoUpload);
+
+  const logoUrlEl = document.getElementById('logo-url');
+  if (logoUrlEl) {
+    logoUrlEl.addEventListener('change', handleLogoUrlInput);
+    logoUrlEl.addEventListener('paste', handleLogoUrlPaste);
+  }
 
   // Wire featured image events
-  const urlInput = document.getElementById('featured-image-url');
-  urlInput.addEventListener('paste', handleFeaturedImagePaste);
-  urlInput.addEventListener('change', handleFeaturedImageUrlChange);
-  document.getElementById('featured-image-upload').addEventListener('change', handleFeaturedImageUpload);
+  const featuredImageUrlInput = document.getElementById('featured-image-url');
+  if (featuredImageUrlInput) {
+    featuredImageUrlInput.addEventListener('paste', handleFeaturedImagePaste);
+    featuredImageUrlInput.addEventListener('change', handleFeaturedImageUrlChange);
+  }
+  
+  const featuredImageUpload = document.getElementById('featured-image-upload');
+  if (featuredImageUpload) featuredImageUpload.addEventListener('change', handleFeaturedImageUpload);
 
   // Persist Last-Used Prompts & Settings --------
 function persistSelect(id, key) {
   const el = document.getElementById(id);
-  el.addEventListener('change', () => localStorage.setItem(key, el.value));
-  const last = localStorage.getItem(key);
-  if (last) el.value = last;
+  if (el) {
+    el.addEventListener('change', () => localStorage.setItem(key, el.value));
+    const last = localStorage.getItem(key);
+    if (last) {
+      el.value = last;
+    }
+  } else {
+    console.warn(`[persistSelect] Element with ID '${id}' not found. Cannot persist its state.`);
+  }
 }
 persistSelect('prompt-select', 'lastPrompt');
 persistSelect('image-strategy-select', 'lastImageStrategy');

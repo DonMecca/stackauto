@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 - Ongoing development, see `/docs/TASK_LIST.md` for current progress.
+- June 3, 2025: Fixed critical issue with AppSumo listings displaying sample/mock data instead of actual scraped listings.
+    - Fixed JavaScript error in `persistSelect` function that was breaking UI execution
+    - Enhanced repository to try multiple file paths with robust error handling
+    - Added repository diagnostics to improve troubleshooting capabilities
+    - Fixed data flow between backend and frontend for AppSumo listings
+    - Detailed changes documented in `/docs/PROGRESS.md`
 - June 3, 2025: Successfully integrated AppSumo scraper into main Electron app (see `/docs/PROGRESS.md`).
     - Added tab navigation between Content Workflow and AppSumo Deals.
     - Created simplified AppSumo renderer script compatible with Electron's contextIsolation.

@@ -2,6 +2,14 @@
 
 ## June 2025
 
+### AppSumo Listings Display Fix (June 3)
+- Fixed critical issue with AppSumo listings displaying sample/mock data instead of actual scraped listings:
+  - Resolved JavaScript error in `renderer.js` where `persistSelect` function was crashing on non-existent DOM elements
+  - Enhanced `AppSumoListingRepository` to try multiple file paths for data with robust error handling
+  - Added detailed logging and diagnostic capabilities for repository data loading issues
+  - Improved frontend error handling to clear stale UI when data loading fails
+  - Fixed data flow between backend repository and frontend display
+
 ### AppSumo Scraper Integration (June 3)
 - Successfully integrated AppSumo scraper functionality into the main Electron application:
   - Added tab navigation UI with buttons to switch between Content Workflow and AppSumo Deals.

@@ -274,10 +274,26 @@ ipcMain.handle('config-set', async (event, { key, value }) => {
 // Get all AppSumo listings
 ipcMain.handle('appsumo-get-all-listings', async () => {
   try {
-    return await appsumoController.getAllListings();
+    console.log('IPC: appsumo-get-all-listings called');
+    const listings = await appsumoController.getAllListings();
+    console.log(`IPC: appsumo-get-all-listings returning ${listings.length} listings`);
+    return listings;
   } catch (err) {
     console.error('Error getting AppSumo listings:', err);
     return { error: err.message };
+  }
+});
+
+// Run diagnostic on AppSumo repository
+ipcMain.handle('appsumo-diagnose-repository', async () => {
+  try {
+    console.log('IPC: appsumo-diagnose-repository called');
+    const diagnosticInfo = await appsumoController.diagnoseRepository();
+    console.log('IPC: Repository diagnostic complete');
+    return { success: true, info: diagnosticInfo };
+  } catch (err) {
+    console.error('Error diagnosing AppSumo repository:', err);
+    return { success: false, error: err.message };
   }
 });
 
